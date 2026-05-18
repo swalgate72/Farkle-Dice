@@ -1,0 +1,850 @@
+import { useState, useEffect, useCallback } from "react";
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function rollDie() {
+  return Math.floor(Math.random() * 6) + 1;
+}
+
+function rollDice(count) {
+  return Array.from({ length: count }, rollDie);
+}
+
+/** Returns { score, scoringMask } for a set of dice values.
+ *  scoringMask[i] = true if dice[i] contributes to the score. */
+function scoreDice(dice) {
+  const counts = Array(7).fill(0);
+  dice.forEach((d) => counts[d]++);
+
+  let score = 0;
+  const used = Array(7).fill(0); // how many of each face are "used"
+
+  // Three-of-a-kind (handle 1s specially: 1000 pts)
+  for (let face = 1; face <= 6; face++) {
+    if (counts[face] >= 3) {
+      score += face === 1 ? 1000 : face * 100;
+      used[face] += 3;
+    }
+  }
+  // Remaining singles: 1 = 100, 5 = 50
+  const rem1 = counts[1] - used[1];
+  score += rem1 * 100;
+  used[1] += rem1;
+
+  const rem5 = counts[5] - used[5];
+  score += rem5 * 50;
+  used[5] += rem5;
+
+  // Build per-die mask
+  const usedLeft = [...used];
+  const mask = dice.map((d) => {
+    if (usedLeft[d] > 0) { usedLeft[d]--; return true; }
+    return false;
+  });
+
+  return { score, mask };
+}
+
+function isBust(dice) {
+  return scoreDice(dice).score === 0;
+}
+
+function allScore(dice) {
+  const { mask } = scoreDice(dice);
+  return mask.every(Boolean);
+}
+
+// Score only the selected subset of dice
+function scoreSelected(dice, selected) {
+  const subset = dice.filter((_, i) => selected[i]);
+  return scoreDice(subset).score;
+}
+
+const DOT_POSITIONS = {
+  1: [[50, 50]],
+  2: [[25, 25], [75, 75]],
+  3: [[25, 25], [50, 50], [75, 75]],
+  4: [[25, 25], [75, 25], [25, 75], [75, 75]],
+  5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
+  6: [[25, 25], [75, 25], [25, 50], [75, 50], [25, 75], [75, 75]],
+};
+
+// ── Die component ─────────────────────────────────────────────────────────────
+
+function Die({ value, selected, scoring, rolling, onClick, disabled }) {
+  const dots = DOT_POSITIONS[value] || [];
+
+  let border = "2px solid rgba(255,255,255,0.15)";
+  let bg = "linear-gradient(145deg, #2a2a3e, #1a1a2e)";
+  let shadow = "4px 4px 10px #0d0d1a, -2px -2px 6px #3a3a5a";
+  let cursor = disabled ? "not-allowed" : "pointer";
+  let transform = "";
+
+  if (selected) {
+    bg = "linear-gradient(145deg, #1a3a5e, #0d2040)";
+    border = "2px solid #4af";
+    shadow = "0 0 16px #4af8, 4px 4px 10px #0d0d1a";
+    transform = "translateY(-8px)";
+  }
+  if (!scoring && !selected) {
+    bg = "linear-gradient(145deg, #1e1e28, #141420)";
+    border = "2px solid rgba(255,255,255,0.06)";
+  }
+
+  return (
+    <div
+      onClick={!disabled ? onClick : undefined}
+      style={{
+        width: 72,
+        height: 72,
+        borderRadius: 14,
+        background: bg,
+        border,
+        boxShadow: shadow,
+        cursor,
+        position: "relative",
+        transition: "all 0.2s cubic-bezier(.34,1.56,.64,1)",
+        transform: rolling ? "rotate(720deg) scale(0.8)" : transform,
+        opacity: disabled && !selected ? 0.45 : 1,
+        userSelect: "none",
+        flexShrink: 0,
+      }}
+    >
+      {dots.map(([x, y], i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: selected ? "#7df" : scoring ? "#dde" : "#555",
+            left: `${x}%`,
+            top: `${y}%`,
+            transform: "translate(-50%, -50%)",
+            boxShadow: selected ? "0 0 6px #7df" : "none",
+            transition: "background 0.2s",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Scoreboard ─────────────────────────────────────────────────────────────
+
+function Scoreboard({ players, currentIdx, finalRound, triggerPlayerIdx }) {
+  return (
+    <div style={{
+      background: "rgba(255,255,255,0.03)",
+      borderRadius: 16,
+      border: "1px solid rgba(255,255,255,0.08)",
+      padding: "20px 24px",
+      minWidth: 220,
+    }}>
+      <div style={{ fontFamily: "'Cinzel', serif", fontSize: 13, letterSpacing: 3, color: "#aaa", marginBottom: 16, textTransform: "uppercase" }}>Scoreboard</div>
+      {players.map((p, i) => (
+        <div key={i} style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "10px 12px",
+          marginBottom: 6,
+          borderRadius: 10,
+          background: i === currentIdx ? "rgba(68,170,255,0.1)" : "transparent",
+          border: i === currentIdx ? "1px solid rgba(68,170,255,0.3)" : "1px solid transparent",
+          transition: "all 0.3s",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: i === currentIdx ? "#4af" : p.onBoard ? "#4a4" : "#666",
+              boxShadow: i === currentIdx ? "0 0 8px #4af" : "none",
+            }} />
+            <span style={{ color: i === currentIdx ? "#7df" : "#bbb", fontSize: 15, fontWeight: i === currentIdx ? 600 : 400 }}>{p.name}</span>
+            {i === triggerPlayerIdx && finalRound && <span style={{ fontSize: 10, color: "#fa4", marginLeft: 4 }}>★</span>}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+            <span style={{ color: "#fff", fontFamily: "monospace", fontSize: 16, fontWeight: 700 }}>{p.score.toLocaleString()}</span>
+            {!p.onBoard && <span style={{ color: "#666", fontSize: 10 }}>need 500</span>}
+          </div>
+        </div>
+      ))}
+      {finalRound && (
+        <div style={{ marginTop: 12, padding: "8px 12px", background: "rgba(250,100,50,0.1)", border: "1px solid rgba(250,100,50,0.3)", borderRadius: 8, color: "#fa8", fontSize: 12, textAlign: "center" }}>
+          🏁 Final Round!
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+
+const WINNING_SCORE = 5000;
+
+const COMBO_TABLE = [
+  ["Single 1", "100 pts"],
+  ["Single 5", "50 pts"],
+  ["Three 1s", "1,000 pts"],
+  ["Three 2s–6s", "face × 100"],
+];
+
+export default function FarkleApp() {
+  // Setup state
+  const [screen, setScreen] = useState("setup"); // setup | game | gameover
+  const [playerNames, setPlayerNames] = useState(["", ""]);
+
+  // Game state
+  const [players, setPlayers] = useState([]);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [dice, setDice] = useState([]);
+  const [selected, setSelected] = useState(Array(6).fill(false));
+  const [rolling, setRolling] = useState(false);
+  const [turnScore, setTurnScore] = useState(0);
+  const [bankedThisSet, setBankedThisSet] = useState(0); // points locked from kept dice this roll
+  const [phase, setPhase] = useState("idle"); // idle | rolled | bust | hotdice | gameover
+  const [message, setMessage] = useState("");
+  const [finalRound, setFinalRound] = useState(false);
+  const [finalRoundPlayers, setFinalRoundPlayers] = useState([]); // indices who still need final turn
+  const [triggerPlayerIdx, setTriggerPlayerIdx] = useState(null);
+  const [diceInPlay, setDiceInPlay] = useState(6); // how many dice to roll
+  const [showBankConfirm, setShowBankConfirm] = useState(false);
+  const [pendingBankTotal, setPendingBankTotal] = useState(0);
+  const [bankDeniedMsg, setBankDeniedMsg] = useState("");
+
+  // ── setup ─────────────────────────────────────────────────────────────────
+
+  function addPlayer() {
+    if (playerNames.length < 6) setPlayerNames([...playerNames, ""]);
+  }
+
+  function removePlayer(i) {
+    if (playerNames.length > 2) setPlayerNames(playerNames.filter((_, j) => j !== i));
+  }
+
+  function startGame() {
+    const ps = playerNames.map((name, i) => ({ name: name.trim() || `Player ${i + 1}`, score: 0, onBoard: false }));
+    setPlayers(ps);
+    setCurrentIdx(0);
+    setDice([]);
+    setSelected(Array(6).fill(false));
+    setTurnScore(0);
+    setBankedThisSet(0);
+    setPhase("idle");
+    setMessage(`${ps[0].name}'s turn — roll to begin!`);
+    setFinalRound(false);
+    setFinalRoundPlayers([]);
+    setTriggerPlayerIdx(null);
+    setDiceInPlay(6);
+    setShowBankConfirm(false);
+    setPendingBankTotal(0);
+    setBankDeniedMsg("");
+    setScreen("game");
+  }
+
+  // ── scoring helpers ───────────────────────────────────────────────────────
+
+  const scoringMask = useCallback(() => {
+    if (!dice.length) return Array(6).fill(false);
+    const { mask } = scoreDice(dice);
+    return mask;
+  }, [dice]);
+
+  const selectedScore = useCallback(() => {
+    if (!dice.length) return 0;
+    return scoreSelected(dice, selected);
+  }, [dice, selected]);
+
+  const canBank = phase === "rolled" && selected.some(Boolean) && selectedScore() > 0;
+  const canRollMore = phase === "rolled" && selected.some(Boolean) && selectedScore() > 0;
+
+  // ── roll ──────────────────────────────────────────────────────────────────
+
+  function doRoll(count) {
+    setRolling(true);
+    setSelected(Array(6).fill(false));
+
+    setTimeout(() => {
+      const newDice = rollDice(count);
+      setDice(newDice);
+      setRolling(false);
+
+      if (isBust(newDice)) {
+        setPhase("bust");
+        setMessage("💥 Bust! No scoring dice. Turn over — 0 points.");
+        // advance after short delay
+        setTimeout(() => advanceTurn(true), 1800);
+      } else if (allScore(newDice)) {
+        setPhase("hotdice");
+        setMessage("🔥 Hot Dice! All dice score — you MUST roll all 6 again!");
+        // auto-select all, show score, prompt re-roll
+      } else {
+        setPhase("rolled");
+        setMessage("Select scoring dice, then bank or keep rolling.");
+      }
+    }, 600);
+  }
+
+  function handleRoll() {
+    if (phase === "idle") {
+      doRoll(6);
+      setDiceInPlay(6);
+      setTurnScore(0);
+      setBankedThisSet(0);
+    } else if (phase === "rolled" && canRollMore) {
+      // lock selected dice, roll remaining
+      const keptScore = selectedScore();
+      const newBanked = bankedThisSet + keptScore;
+      setBankedThisSet(newBanked);
+
+      const remaining = dice.filter((_, i) => !selected[i]).length;
+      if (remaining === 0) {
+        // hot dice triggered manually (all selected)
+        setTurnScore((ts) => ts + keptScore);
+        setDiceInPlay(6);
+        setMessage("🔥 All dice kept — rolling all 6 again!");
+        doRollAfterKeep(newBanked, 6);
+      } else {
+        setTurnScore((ts) => ts + keptScore);
+        setDiceInPlay(remaining);
+        doRollAfterKeep(newBanked, remaining);
+      }
+    } else if (phase === "hotdice") {
+      const hotScore = scoreDice(dice).score;
+      const newBanked = bankedThisSet + hotScore;
+      setBankedThisSet(newBanked);
+      setTurnScore((ts) => ts + hotScore);
+      setDiceInPlay(6);
+      doRollAfterKeep(newBanked, 6);
+    }
+  }
+
+  function doRollAfterKeep(bankedSoFar, count) {
+    setRolling(true);
+    setSelected(Array(6).fill(false));
+
+    setTimeout(() => {
+      const newDice = rollDice(count);
+      setDice(newDice);
+      setRolling(false);
+
+      if (isBust(newDice)) {
+        setPhase("bust");
+        setMessage("💥 Bust! No scoring dice. Turn over — 0 points.");
+        setTimeout(() => advanceTurn(true), 1800);
+      } else if (allScore(newDice)) {
+        setPhase("hotdice");
+        setMessage("🔥 Hot Dice! All dice score — you MUST roll all 6 again!");
+      } else {
+        setPhase("rolled");
+        setMessage("Select scoring dice, then bank or keep rolling.");
+      }
+    }, 600);
+  }
+
+  // ── bank ──────────────────────────────────────────────────────────────────
+
+  function handleBankClick() {
+    if (!canBank) return;
+    const pts = selectedScore();
+    const total = turnScore + pts;
+
+    // Not yet on the board: block if under 500
+    if (currentPlayer && !currentPlayer.onBoard && total < 500) {
+      setBankDeniedMsg(`You need at least 500 pts to get on the board. Keep rolling! (${total} pts so far)`);
+      setTimeout(() => setBankDeniedMsg(""), 3000);
+      return;
+    }
+
+    // Valid bank — capture total now and show confirm dialog
+    setPendingBankTotal(total);
+    setShowBankConfirm(true);
+  }
+
+  function confirmBank() {
+    setShowBankConfirm(false);
+    advanceTurn(false, pendingBankTotal);
+  }
+
+  function cancelBank() {
+    setShowBankConfirm(false);
+  }
+
+  function advanceTurn(bust, earnedThisTurn = 0) {
+    setPlayers((prev) => {
+      const updated = prev.map((p, i) => {
+        if (i !== currentIdx) return p;
+        if (bust) return p;
+        const newScore = p.score + earnedThisTurn;
+        return { ...p, score: newScore, onBoard: p.onBoard || earnedThisTurn >= 500 };
+      });
+
+      // Check win condition
+      const cur = updated[currentIdx];
+      const triggered = !bust && cur.score >= WINNING_SCORE;
+
+      setTurnScore(0);
+      setBankedThisSet(0);
+      setDice([]);
+      setSelected(Array(6).fill(false));
+      setDiceInPlay(6);
+
+      if (triggered && !finalRound) {
+        // Start final round
+        setFinalRound(true);
+        setTriggerPlayerIdx(currentIdx);
+        const remaining = updated
+          .map((_, i) => i)
+          .filter((i) => i !== currentIdx);
+        setFinalRoundPlayers(remaining);
+
+        if (remaining.length === 0) {
+          // solo game or last player triggered
+          setPhase("gameover");
+          setScreen("gameover");
+          return updated;
+        }
+
+        const nextIdx = remaining[0];
+        setCurrentIdx(nextIdx);
+        setFinalRoundPlayers(remaining.slice(1));
+        setPhase("idle");
+        setMessage(`🏁 Final Round! ${updated[nextIdx].name}, can you beat ${cur.score.toLocaleString()}?`);
+        return updated;
+      }
+
+      if (finalRound) {
+        // consume final round queue
+        const nextQueue = [...finalRoundPlayers];
+        if (nextQueue.length === 0) {
+          setPhase("gameover");
+          setScreen("gameover");
+          return updated;
+        }
+        const nextIdx = nextQueue.shift();
+        setCurrentIdx(nextIdx);
+        setFinalRoundPlayers(nextQueue);
+        setPhase("idle");
+        setMessage(`🏁 Final Round! ${updated[nextIdx].name}, roll!`);
+        return updated;
+      }
+
+      // Normal next turn
+      const nextIdx = (currentIdx + 1) % updated.length;
+      setCurrentIdx(nextIdx);
+      setPhase("idle");
+      setMessage(`${updated[nextIdx].name}'s turn — roll to begin!`);
+      return updated;
+    });
+  }
+
+  // ── toggle die selection ──────────────────────────────────────────────────
+
+  function toggleDie(i) {
+    if (phase !== "rolled") return;
+    const mask = scoringMask();
+    if (!mask[i]) return; // non-scoring die
+    setSelected((prev) => {
+      const next = [...prev];
+      next[i] = !next[i];
+      return next;
+    });
+  }
+
+  // ── derived ───────────────────────────────────────────────────────────────
+
+  const currentPlayer = players[currentIdx];
+  const pendingScore = phase === "rolled" ? turnScore + selectedScore() : turnScore;
+  const mask = scoringMask();
+
+  // ── winner ────────────────────────────────────────────────────────────────
+
+  const winner = screen === "gameover"
+    ? [...players].sort((a, b) => b.score - a.score)[0]
+    : null;
+
+  // ── not enough on-board warning ───────────────────────────────────────────
+  const onBoardWarning = currentPlayer && !currentPlayer.onBoard && pendingScore > 0 && pendingScore < 500;
+
+  // ── render ────────────────────────────────────────────────────────────────
+
+  if (screen === "setup") {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        background: "radial-gradient(ellipse at 30% 20%, #1a1a3e 0%, #0a0a1a 60%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "'Segoe UI', sans-serif",
+        color: "#ddd",
+      }}>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          input { outline: none; }
+          input::placeholder { color: rgba(255,255,255,0.25); font-style: italic; }
+          button { cursor: pointer; border: none; }
+          ::-webkit-scrollbar { width: 4px; }
+          ::-webkit-scrollbar-track { background: transparent; }
+          ::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+        `}</style>
+
+        <div style={{ maxWidth: 480, width: "100%", padding: 40 }}>
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <div style={{ fontSize: 56, marginBottom: 8 }}>🎲</div>
+            <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: 48, fontWeight: 700, letterSpacing: 4, color: "#fff", textShadow: "0 0 40px rgba(100,150,255,0.5)" }}>FARKLE</h1>
+            <p style={{ fontFamily: "'Crimson Text', serif", fontSize: 18, color: "#88a", marginTop: 8, fontStyle: "italic" }}>A game of dice and daring</p>
+          </div>
+
+          <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 20, border: "1px solid rgba(255,255,255,0.08)", padding: 32, marginBottom: 24 }}>
+            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: 3, color: "#88a", marginBottom: 20, textTransform: "uppercase" }}>Players</div>
+            {playerNames.map((name, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "center" }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(68,170,255,0.15)", border: "1px solid rgba(68,170,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#4af", flexShrink: 0 }}>{i + 1}</div>
+                <input
+                  value={name}
+                  onChange={(e) => setPlayerNames(playerNames.map((n, j) => j === i ? e.target.value : n))}
+                  placeholder={`Player ${i + 1}`}
+                  style={{
+                    flex: 1,
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    color: "#fff",
+                    fontSize: 15,
+                    fontFamily: "'Segoe UI', sans-serif",
+                    transition: "border 0.2s",
+                  }}
+                  onFocus={(e) => e.target.style.border = "1px solid rgba(68,170,255,0.5)"}
+                  onBlur={(e) => e.target.style.border = "1px solid rgba(255,255,255,0.1)"}
+                />
+                {playerNames.length > 2 && (
+                  <button onClick={() => removePlayer(i)} style={{ background: "rgba(255,80,80,0.15)", border: "1px solid rgba(255,80,80,0.3)", borderRadius: 8, color: "#f88", width: 32, height: 32, fontSize: 16 }}>×</button>
+                )}
+              </div>
+            ))}
+            {playerNames.length < 6 && (
+              <button onClick={addPlayer} style={{ width: "100%", marginTop: 8, padding: "10px", background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,255,255,0.15)", borderRadius: 10, color: "#888", fontSize: 14, transition: "all 0.2s" }}
+                onMouseEnter={(e) => e.target.style.borderColor = "rgba(68,170,255,0.4)"}
+                onMouseLeave={(e) => e.target.style.borderColor = "rgba(255,255,255,0.15)"}
+              >+ Add Player</button>
+            )}
+          </div>
+
+          <button onClick={startGame} style={{
+            width: "100%", padding: "16px", borderRadius: 14,
+            background: "linear-gradient(135deg, #2255cc, #4488ff)",
+            color: "#fff", fontSize: 18, fontFamily: "'Cinzel', serif",
+            letterSpacing: 3, fontWeight: 700, boxShadow: "0 8px 32px rgba(68,136,255,0.4)",
+            transition: "all 0.2s",
+          }}
+            onMouseEnter={(e) => e.target.style.transform = "translateY(-2px)"}
+            onMouseLeave={(e) => e.target.style.transform = "translateY(0)"}
+          >START GAME</button>
+
+          <div style={{ marginTop: 32, background: "rgba(255,255,255,0.02)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)", padding: 20 }}>
+            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: 3, color: "#666", marginBottom: 14, textTransform: "uppercase" }}>Scoring Reference</div>
+            {COMBO_TABLE.map(([combo, pts], i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: i < COMBO_TABLE.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                <span style={{ color: "#aaa", fontSize: 13 }}>{combo}</span>
+                <span style={{ color: "#7df", fontSize: 13, fontFamily: "monospace" }}>{pts}</span>
+              </div>
+            ))}
+            <div style={{ marginTop: 12, color: "#666", fontSize: 12, fontStyle: "italic", fontFamily: "'Crimson Text', serif" }}>First turn-on-board requires ≥ 500 pts. Reach 5,000 to trigger final round.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "gameover") {
+    const sorted = [...players].sort((a, b) => b.score - a.score);
+    return (
+      <div style={{
+        minHeight: "100vh",
+        background: "radial-gradient(ellipse at 50% 30%, #1a2a0a 0%, #0a0a1a 70%)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "'Segoe UI', sans-serif", color: "#ddd",
+      }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap'); * { box-sizing: border-box; }`}</style>
+        <div style={{ maxWidth: 460, width: "100%", padding: 40, textAlign: "center" }}>
+          <div style={{ fontSize: 72, marginBottom: 16 }}>🏆</div>
+          <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: 40, fontWeight: 700, letterSpacing: 4, color: "#ffd700", textShadow: "0 0 40px rgba(255,200,0,0.6)", marginBottom: 8 }}>{sorted[0].name}</h1>
+          <p style={{ fontFamily: "'Crimson Text', serif", fontSize: 20, color: "#aaa", fontStyle: "italic", marginBottom: 8 }}>wins with</p>
+          <p style={{ fontSize: 52, fontFamily: "monospace", fontWeight: 700, color: "#ffd700", marginBottom: 40 }}>{sorted[0].score.toLocaleString()}</p>
+
+          <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", padding: 24, marginBottom: 32 }}>
+            {sorted.map((p, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: i < sorted.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+                <span style={{ color: i === 0 ? "#ffd700" : "#aaa", fontWeight: i === 0 ? 700 : 400 }}>{i + 1}. {p.name}</span>
+                <span style={{ fontFamily: "monospace", color: i === 0 ? "#ffd700" : "#888" }}>{p.score.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 12 }}>
+            <button onClick={() => setScreen("setup")} style={{ flex: 1, padding: 14, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#ccc", fontSize: 15 }}>New Players</button>
+            <button onClick={startGame} style={{ flex: 1, padding: 14, borderRadius: 12, background: "linear-gradient(135deg, #2255cc, #4488ff)", color: "#fff", fontSize: 15, fontFamily: "'Cinzel', serif", letterSpacing: 2, boxShadow: "0 4px 20px rgba(68,136,255,0.4)" }}>PLAY AGAIN</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── game screen ────────────────────────────────────────────────────────────
+
+  const rollLabel =
+    phase === "idle" ? "Roll Dice" :
+    phase === "hotdice" ? "🔥 Roll All 6!" :
+    phase === "rolled" ? "Keep & Roll More" : "Roll";
+
+  const canRollBtn = phase === "idle" || phase === "hotdice" || (phase === "rolled" && canRollMore);
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "radial-gradient(ellipse at 20% 10%, #1a1a3e 0%, #0a0a1a 70%)",
+      fontFamily: "'Segoe UI', sans-serif",
+      color: "#ddd",
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        button { cursor: pointer; border: none; }
+        .roll-btn:hover:not(:disabled) { transform: translateY(-2px) !important; box-shadow: 0 12px 40px rgba(68,136,255,0.5) !important; }
+        .bank-btn:hover:not(:disabled) { transform: translateY(-2px) !important; box-shadow: 0 12px 40px rgba(80,200,100,0.4) !important; }
+      `}</style>
+
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+        {/* Header */}
+        <div style={{ padding: "20px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ fontFamily: "'Cinzel', serif", fontSize: 24, fontWeight: 700, letterSpacing: 4, color: "#fff" }}>🎲 FARKLE</div>
+          <div style={{ fontFamily: "'Cinzel', serif", fontSize: 13, letterSpacing: 2, color: "#4af" }}>{finalRound ? "🏁 FINAL ROUND" : `First to ${WINNING_SCORE.toLocaleString()}`}</div>
+          <button onClick={() => setScreen("setup")} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#888", padding: "6px 14px", fontSize: 13 }}>Quit</button>
+        </div>
+
+        {/* Main */}
+        <div style={{ flex: 1, display: "flex", gap: 24, padding: "24px 32px", flexWrap: "wrap" }}>
+          {/* Left: game area */}
+          <div style={{ flex: 1, minWidth: 340, display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Current player banner */}
+            <div style={{
+              background: "rgba(68,170,255,0.08)",
+              border: "1px solid rgba(68,170,255,0.2)",
+              borderRadius: 16, padding: "18px 24px",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+            }}>
+              <div>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: 3, color: "#4af", textTransform: "uppercase", marginBottom: 4 }}>Current Turn</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#fff" }}>{currentPlayer?.name}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: 3, color: "#888", textTransform: "uppercase", marginBottom: 4 }}>Total Score</div>
+                <div style={{ fontSize: 28, fontFamily: "monospace", fontWeight: 700, color: "#fff" }}>{currentPlayer?.score.toLocaleString()}</div>
+              </div>
+            </div>
+
+            {/* Dice tray */}
+            <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 20, border: "1px solid rgba(255,255,255,0.07)", padding: 28 }}>
+              <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap", marginBottom: 20 }}>
+                {dice.length === 0
+                  ? Array(6).fill(null).map((_, i) => (
+                    <div key={i} style={{ width: 72, height: 72, borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "2px dashed rgba(255,255,255,0.08)" }} />
+                  ))
+                  : dice.map((val, i) => {
+                    const kept = selected[i]; // chosen by player
+                    const isScoring = mask[i];
+                    const isHot = phase === "hotdice";
+                    return (
+                      <Die
+                        key={i}
+                        value={val}
+                        selected={kept || isHot}
+                        scoring={isScoring}
+                        rolling={rolling}
+                        onClick={() => toggleDie(i)}
+                        disabled={phase !== "rolled" || !isScoring}
+                      />
+                    );
+                  })
+                }
+              </div>
+
+              {/* Legend */}
+              {dice.length > 0 && phase === "rolled" && (
+                <div style={{ display: "flex", gap: 20, justifyContent: "center", marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#dde" }} />
+                    <span style={{ fontSize: 12, color: "#888" }}>Scoring</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#7df" }} />
+                    <span style={{ fontSize: 12, color: "#888" }}>Selected</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Message */}
+              <div style={{
+                textAlign: "center", fontSize: 14, color: phase === "bust" ? "#f88" : phase === "hotdice" ? "#fa4" : "#aaa",
+                fontFamily: "'Crimson Text', serif", fontStyle: "italic", minHeight: 20,
+              }}>{message}</div>
+            </div>
+
+            {/* Score tracker */}
+            <div style={{ display: "flex", gap: 12 }}>
+              <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", padding: "14px 18px", textAlign: "center" }}>
+                <div style={{ fontSize: 11, letterSpacing: 2, color: "#666", textTransform: "uppercase", marginBottom: 6 }}>Locked</div>
+                <div style={{ fontFamily: "monospace", fontSize: 22, color: "#adf", fontWeight: 700 }}>{turnScore.toLocaleString()}</div>
+              </div>
+              <div style={{ flex: 1, background: "rgba(68,200,100,0.06)", borderRadius: 14, border: "1px solid rgba(68,200,100,0.15)", padding: "14px 18px", textAlign: "center" }}>
+                <div style={{ fontSize: 11, letterSpacing: 2, color: "#4a6", textTransform: "uppercase", marginBottom: 6 }}>If Banked</div>
+                <div style={{ fontFamily: "monospace", fontSize: 22, color: "#5d5", fontWeight: 700 }}>{pendingScore.toLocaleString()}</div>
+              </div>
+            </div>
+
+            {onBoardWarning && (
+              <div style={{ background: "rgba(255,180,0,0.08)", border: "1px solid rgba(255,180,0,0.25)", borderRadius: 12, padding: "10px 16px", color: "#fa8", fontSize: 13, textAlign: "center" }}>
+                ⚠️ Need at least 500 pts in one turn to get on the board
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div style={{ display: "flex", gap: 14 }}>
+              <button
+                className="roll-btn"
+                onClick={handleRoll}
+                disabled={!canRollBtn || rolling || phase === "bust"}
+                style={{
+                  flex: 2, padding: "16px 0", borderRadius: 14,
+                  background: canRollBtn && !rolling ? "linear-gradient(135deg, #2255cc, #4488ff)" : "rgba(255,255,255,0.05)",
+                  color: canRollBtn && !rolling ? "#fff" : "#555",
+                  fontSize: 16, fontFamily: "'Cinzel', serif", letterSpacing: 2,
+                  boxShadow: canRollBtn && !rolling ? "0 6px 24px rgba(68,136,255,0.35)" : "none",
+                  transition: "all 0.2s",
+                }}
+              >{rolling ? "Rolling…" : rollLabel}</button>
+
+              <button
+                className="bank-btn"
+                onClick={handleBankClick}
+                disabled={!canBank || rolling}
+                style={{
+                  flex: 1, padding: "16px 0", borderRadius: 14,
+                  background: canBank && !rolling ? "linear-gradient(135deg, #1a5530, #2a8844)" : "rgba(255,255,255,0.05)",
+                  color: canBank && !rolling ? "#fff" : "#555",
+                  fontSize: 15, fontFamily: "'Cinzel', serif", letterSpacing: 2,
+                  boxShadow: canBank && !rolling ? "0 6px 24px rgba(50,180,80,0.3)" : "none",
+                  transition: "all 0.2s",
+                }}
+              >Bank</button>
+            </div>
+
+            {/* Quick reference */}
+            <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 14, border: "1px solid rgba(255,255,255,0.05)", padding: "14px 18px" }}>
+              <div style={{ fontSize: 11, letterSpacing: 2, color: "#555", textTransform: "uppercase", marginBottom: 10 }}>Scoring Reference</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 24px", fontSize: 12, color: "#888" }}>
+                <div>Single 1 → <span style={{ color: "#7df" }}>100</span></div>
+                <div>Three 1s → <span style={{ color: "#7df" }}>1,000</span></div>
+                <div>Single 5 → <span style={{ color: "#7df" }}>50</span></div>
+                <div>Three 2s → <span style={{ color: "#7df" }}>200</span></div>
+                <div>Three 5s → <span style={{ color: "#7df" }}>500</span></div>
+                <div>Three 6s → <span style={{ color: "#7df" }}>600</span></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: scoreboard */}
+          <div style={{ flexShrink: 0 }}>
+            <Scoreboard
+              players={players}
+              currentIdx={currentIdx}
+              finalRound={finalRound}
+              triggerPlayerIdx={triggerPlayerIdx}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Bank denied toast */}
+      {bankDeniedMsg && (
+        <div style={{
+          position: "fixed", bottom: 32, left: "50%", transform: "translateX(-50%)",
+          background: "rgba(220,60,60,0.95)", border: "1px solid rgba(255,100,100,0.5)",
+          borderRadius: 14, padding: "14px 24px", color: "#fff", fontSize: 14,
+          fontFamily: "'Crimson Text', serif", fontStyle: "italic",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          zIndex: 100, maxWidth: 380, textAlign: "center",
+          animation: "fadeSlideUp 0.25s ease",
+        }}>
+          🚫 {bankDeniedMsg}
+        </div>
+      )}
+
+      {/* Bank confirm modal */}
+      {showBankConfirm && (
+        <div style={{
+          position: "fixed", inset: 0,
+          background: "rgba(0,0,0,0.7)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 200,
+          backdropFilter: "blur(4px)",
+        }}>
+          <div style={{
+            background: "linear-gradient(145deg, #1e1e38, #14142a)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 20, padding: "36px 40px",
+            maxWidth: 360, width: "90%",
+            boxShadow: "0 24px 80px rgba(0,0,0,0.7)",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🏦</div>
+            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 8, letterSpacing: 1 }}>
+              Banking ends your go
+            </div>
+            <div style={{ fontFamily: "'Crimson Text', serif", fontStyle: "italic", color: "#aaa", fontSize: 15, marginBottom: 8 }}>
+              You'll bank <span style={{ color: "#5d5", fontWeight: 700, fontStyle: "normal", fontFamily: "monospace", fontSize: 18 }}>{pendingBankTotal.toLocaleString()} pts</span>
+            </div>
+            <div style={{ color: "#888", fontSize: 13, marginBottom: 28 }}>Continue?</div>
+            <div style={{ display: "flex", gap: 14 }}>
+              <button
+                onClick={cancelBank}
+                style={{
+                  flex: 1, padding: "13px 0", borderRadius: 12,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "#ccc", fontSize: 15, fontFamily: "'Cinzel', serif", letterSpacing: 1,
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => e.target.style.background = "rgba(255,255,255,0.1)"}
+                onMouseLeave={(e) => e.target.style.background = "rgba(255,255,255,0.06)"}
+              >No, keep rolling</button>
+              <button
+                onClick={confirmBank}
+                style={{
+                  flex: 1, padding: "13px 0", borderRadius: 12,
+                  background: "linear-gradient(135deg, #1a5530, #2a8844)",
+                  color: "#fff", fontSize: 15, fontFamily: "'Cinzel', serif", letterSpacing: 1,
+                  boxShadow: "0 4px 20px rgba(50,180,80,0.35)",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => e.target.style.transform = "translateY(-1px)"}
+                onMouseLeave={(e) => e.target.style.transform = "translateY(0)"}
+              >Yes, bank it</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+}
