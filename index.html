@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Farkle</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0a0a1a;color:#ddd;font-family:'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden;}
+button{cursor:pointer;border:none;font-family:inherit;}
+input{outline:none;font-family:inherit;}
+input::placeholder{color:rgba(255,255,255,0.25);font-style:italic;}
+
+/* ── Screens ── */
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;}
+#mode-select{background:radial-gradient(ellipse at 30% 20%,#1a1a3e,#0a0a1a);align-items:center;justify-content:center;flex-direction:column;}
+#setup{background:radial-gradient(ellipse at 30% 20%,#1a1a3e,#0a0a1a);align-items:center;justify-content:center;overflow-y:auto;}
+#gameover{background:radial-gradient(ellipse at 50% 30%,#1a2a0a,#0a0a1a);align-items:center;justify-content:center;}
+#game{background:radial-gradient(ellipse at 20% 10%,#1a1a3e,#0a0a1a);flex-direction:column;}
+#scorer{flex-direction:column;min-height:100vh;}
+
+/* ── Utility ── */
+.card{background:rgba(255,255,255,0.03);border-radius:16px;border:1px solid rgba(255,255,255,0.08);padding:20px 24px;}
+.lbl{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#888;}
+.btn{border-radius:14px;padding:16px;font-family:'Cinzel',serif;letter-spacing:2px;font-size:15px;transition:all 0.2s;color:#fff;}
+.btn-blue{background:linear-gradient(135deg,#2255cc,#4488ff);box-shadow:0 6px 24px rgba(68,136,255,0.35);}
+.btn-blue:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 40px rgba(68,136,255,0.5);}
+.btn-green{background:linear-gradient(135deg,#1a5530,#2a8844);box-shadow:0 6px 24px rgba(50,180,80,0.3);}
+.btn-green:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 40px rgba(80,200,100,0.4);}
+.btn-red{background:linear-gradient(135deg,#7a1515,#cc3333);box-shadow:0 6px 24px rgba(200,50,50,0.3);}
+.btn-red:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 40px rgba(200,50,50,0.5);}
+button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important;box-shadow:none!important;cursor:not-allowed!important;transform:none!important;}
+
+/* ── Toggle buttons (setup) ── */
+.tog{padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);color:#888;transition:all 0.18s;min-width:52px;}
+.tog:hover{border-color:rgba(68,170,255,0.4);color:#aac;}
+.tog.active{background:rgba(68,136,255,0.2);border-color:#4af;color:#7df;box-shadow:0 0 16px rgba(68,170,255,0.25);}
+
+/* ── Drag/drop player rows ── */
+.drag-handle{cursor:grab;color:#555;font-size:18px;padding:0 8px;line-height:1;user-select:none;flex-shrink:0;}
+.drag-handle:active{cursor:grabbing;}
+.player-row{display:flex;gap:10px;margin-bottom:10px;align-items:center;border-radius:12px;transition:background 0.15s;padding:2px;}
+.player-row.drag-over{background:rgba(68,170,255,0.08);outline:1px dashed rgba(68,170,255,0.3);}
+
+/* ── Dice ── */
+.dice-tray{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.die{width:72px;height:72px;border-radius:14px;position:relative;user-select:none;flex-shrink:0;transition:all 0.2s cubic-bezier(.34,1.56,.64,1);}
+.die-empty{background:rgba(255,255,255,0.03);border:2px dashed rgba(255,255,255,0.08);}
+.die-normal{background:linear-gradient(145deg,#2a2a3e,#1a1a2e);border:2px solid rgba(255,255,255,0.15);box-shadow:4px 4px 10px #0d0d1a,-2px -2px 6px #3a3a5a;cursor:pointer;}
+.die-selected{background:linear-gradient(145deg,#1a3a5e,#0d2040);border:2px solid #4af;box-shadow:0 0 16px rgba(68,170,255,0.5),4px 4px 10px #0d0d1a;cursor:pointer;transform:translateY(-8px);}
+.die-dead{background:linear-gradient(145deg,#1e1e28,#141420);border:2px solid rgba(255,255,255,0.06);opacity:0.45;cursor:not-allowed;}
+.dot{position:absolute;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%);}
+.dot-normal{background:#dde;}
+.dot-selected{background:#7df;box-shadow:0 0 6px #7df;}
+.dot-dead{background:#555;}
+
+/* ── Toast ── */
+#toast{display:none;position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:rgba(220,60,60,0.95);border:1px solid rgba(255,100,100,0.5);border-radius:14px;padding:14px 24px;color:#fff;font-size:14px;font-style:italic;box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:300;max-width:380px;text-align:center;}
+
+/* ── Modal (bank confirm for dice game) ── */
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px);}
+#modal.show{display:flex;}
+.modal-box{background:linear-gradient(145deg,#1e1e38,#14142a);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:36px 40px;max-width:360px;width:90%;box-shadow:0 24px 80px rgba(0,0,0,0.7);text-align:center;}
+
+/* ── Bank dial modal (score-only mode) ── */
+#dial-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(6px);}
+#dial-modal.show{display:flex;}
+.dial-box{background:linear-gradient(145deg,#1a1a2e,#10101e);border:1px solid rgba(255,255,255,0.1);border-radius:28px;padding:28px 24px 24px;max-width:400px;width:96%;box-shadow:0 28px 80px rgba(0,0,0,0.9);text-align:center;}
+.pad-display{font-family:'Cinzel',serif;font-size:64px;font-weight:700;color:#5d5;letter-spacing:2px;line-height:1;min-height:76px;margin:12px 0 20px;text-shadow:0 0 30px rgba(80,220,100,0.3);}
+.pad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
+.pad-key{padding:18px 0;border-radius:14px;font-size:24px;font-weight:700;color:#fff;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);transition:all 0.12s;user-select:none;}
+.pad-key:active{background:rgba(255,255,255,0.18);transform:scale(0.94);}
+.pad-key-zero{grid-column:span 2;}
+.pad-key-del{background:rgba(255,80,80,0.12);border-color:rgba(255,80,80,0.2);font-size:20px;}
+.pad-key-del:active{background:rgba(255,80,80,0.25);}
+.pad-quick{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;justify-content:center;}
+.pad-q-btn{padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;background:rgba(68,136,255,0.12);border:1px solid rgba(68,136,255,0.25);color:#7af;transition:all 0.12s;}
+.pad-q-btn:active{background:rgba(68,136,255,0.3);}
+
+/* ── Scorer screen ── */
+#scorer-bg{position:absolute;inset:0;transition:background 0.5s;}
+#scorer-content{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;min-height:100vh;}
+.scorer-progress{height:6px;background:rgba(255,255,255,0.08);border-radius:3px;margin:0 0 0 0;overflow:hidden;}
+.scorer-progress-fill{height:100%;border-radius:3px;transition:width 0.6s ease;background:linear-gradient(90deg,rgba(255,255,255,0.3),rgba(255,255,255,0.7));}
+
+/* ── Scoreboard overlay (score mode) ── */
+#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:250;flex-direction:column;align-items:center;justify-content:flex-start;padding:40px 24px;overflow-y:auto;}
+#sb-overlay.show{display:flex;}
+
+/* ── Animations ── */
+@keyframes spin{0%{transform:rotate(0)scale(1)}50%{transform:rotate(360deg)scale(0.8)}100%{transform:rotate(720deg)scale(1)}}
+.spinning{animation:spin 0.5s ease;}
+@keyframes pop{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
+.pop{animation:pop 0.25s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.slideup{animation:slideup 0.35s ease forwards;}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     MODE SELECT
+══════════════════════════════════════════════════ -->
+<div id="mode-select" class="screen active">
+  <div style="max-width:460px;width:100%;padding:40px 24px;text-align:center;">
+    <div style="font-size:52px;margin-bottom:10px;">&#127922;</div>
+    <h1 style="font-family:'Cinzel',serif;font-size:44px;font-weight:900;letter-spacing:4px;color:#fff;text-shadow:0 0 40px rgba(100,150,255,0.5);margin-bottom:8px;">FARKLE</h1>
+    <p style="font-family:'Crimson Text',serif;font-size:17px;color:#88a;font-style:italic;margin-bottom:48px;">A game of dice and daring</p>
+
+    <div style="margin-bottom:20px;">
+      <button onclick="chooseMode('device')" style="width:100%;padding:28px 24px;border-radius:20px;background:linear-gradient(135deg,#1a2a5e,#2244aa);border:2px solid rgba(68,136,255,0.4);color:#fff;text-align:left;display:flex;align-items:center;gap:20px;transition:all 0.2s;margin-bottom:16px;"
+        onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:40px;flex-shrink:0;">&#127922;</div>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px;">Play on Device</div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.6);font-family:'Crimson Text',serif;">I don't have dice &mdash; roll everything in the app</div>
+        </div>
+      </button>
+
+      <button onclick="chooseMode('score')" style="width:100%;padding:28px 24px;border-radius:20px;background:linear-gradient(135deg,#1a3a20,#2a6a35);border:2px solid rgba(50,180,80,0.4);color:#fff;text-align:left;display:flex;align-items:center;gap:20px;transition:all 0.2s;"
+        onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:40px;flex-shrink:0;">&#9861;&#65039;</div>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px;">Score Only</div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.6);font-family:'Crimson Text',serif;">I have physical dice &mdash; just track the score</div>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SETUP (shared by both modes)
+══════════════════════════════════════════════════ -->
+<div id="setup" class="screen">
+  <div style="max-width:500px;width:100%;padding:32px 24px;overflow-y:auto;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div id="setup-mode-badge" style="display:inline-block;padding:6px 18px;border-radius:20px;font-size:12px;font-family:'Cinzel',serif;letter-spacing:2px;margin-bottom:16px;"></div>
+      <h1 style="font-family:'Cinzel',serif;font-size:36px;font-weight:700;letter-spacing:4px;color:#fff;">FARKLE</h1>
+    </div>
+
+    <!-- Step 1 -->
+    <div id="step1-panel">
+      <div class="card" style="padding:28px;margin-bottom:20px;">
+        <div class="lbl" style="margin-bottom:20px;">How many players?</div>
+        <div id="player-count-btns" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;"></div>
+      </div>
+      <div class="card" style="padding:28px;margin-bottom:28px;">
+        <div class="lbl" style="margin-bottom:20px;">Play to how many points?</div>
+        <div id="target-score-btns" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;"></div>
+      </div>
+      <button onclick="goToStep2()" class="btn btn-blue" style="width:100%;font-size:16px;font-weight:700;letter-spacing:3px;">NEXT: NAME PLAYERS &rarr;</button>
+      <button onclick="showScreen('mode-select')" style="width:100%;margin-top:12px;padding:12px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#666;font-size:13px;">&larr; Change Mode</button>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="step2-panel" style="display:none;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+        <button onclick="goToStep1()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#aaa;padding:8px 14px;font-size:13px;">&larr; Back</button>
+        <span style="flex:1;text-align:center;font-family:'Cinzel',serif;font-size:13px;letter-spacing:2px;color:#4af;" id="step2-summary"></span>
+      </div>
+      <div class="card" style="padding:28px;margin-bottom:16px;">
+        <div class="lbl" style="margin-bottom:6px;">Enter player names</div>
+        <div style="color:#666;font-size:12px;margin-bottom:20px;font-family:'Crimson Text',serif;font-style:italic;">Drag &#9776; to reorder around the table</div>
+        <div id="player-inputs"></div>
+      </div>
+      <div id="setup-ref" class="card" style="margin-bottom:28px;padding:20px;">
+        <div class="lbl" style="margin-bottom:14px;">Scoring Reference</div>
+        <div style="font-size:13px;color:#aaa;">
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">Single 1<span style="color:#7df;font-family:monospace;">100 pts</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">Single 5<span style="color:#7df;font-family:monospace;">50 pts</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">Three 1s<span style="color:#7df;font-family:monospace;">1,000 pts</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;">Three 2s-6s<span style="color:#7df;font-family:monospace;">face x 100</span></div>
+        </div>
+      </div>
+      <button onclick="startGame()" class="btn btn-blue" style="width:100%;font-size:18px;font-weight:700;letter-spacing:3px;">START GAME</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     DICE GAME SCREEN
+══════════════════════════════════════════════════ -->
+<div id="game" class="screen">
+  <div style="padding:18px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.05);">
+    <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:4px;color:#fff;">&#127922; FARKLE</div>
+    <div id="round-lbl" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;color:#4af;"></div>
+    <button onclick="showScreen('mode-select')" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#888;padding:6px 14px;font-size:13px;">Quit</button>
+  </div>
+  <div style="flex:1;display:flex;gap:24px;padding:20px 28px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:320px;display:flex;flex-direction:column;gap:18px;">
+      <div style="background:rgba(68,170,255,0.08);border:1px solid rgba(68,170,255,0.2);border-radius:16px;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div class="lbl" style="color:#4af;margin-bottom:4px;">Current Turn</div>
+          <div id="cur-name" style="font-size:22px;font-weight:700;color:#fff;"></div>
+        </div>
+        <div style="text-align:right;">
+          <div class="lbl" style="margin-bottom:4px;">Total Score</div>
+          <div id="cur-total" style="font-size:28px;font-family:monospace;font-weight:700;color:#fff;">0</div>
+        </div>
+      </div>
+      <div class="card" style="padding:24px;">
+        <div id="dice-tray" class="dice-tray" style="margin-bottom:20px;"></div>
+        <div id="legend" style="display:none;justify-content:center;gap:20px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#dde;"></div><span style="font-size:12px;color:#888;">Scoring</span></div>
+          <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#7df;"></div><span style="font-size:12px;color:#888;">Selected</span></div>
+        </div>
+        <div id="msg" style="text-align:center;font-size:14px;font-family:'Crimson Text',serif;font-style:italic;color:#aaa;min-height:20px;"></div>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div class="card" style="flex:1;text-align:center;padding:14px;">
+          <div class="lbl" style="margin-bottom:6px;">Locked</div>
+          <div id="locked" style="font-family:monospace;font-size:22px;color:#adf;font-weight:700;">0</div>
+        </div>
+        <div style="flex:1;background:rgba(68,200,100,0.06);border-radius:14px;border:1px solid rgba(68,200,100,0.15);padding:14px;text-align:center;">
+          <div class="lbl" style="color:#4a6;margin-bottom:6px;">If Banked</div>
+          <div id="if-banked" style="font-family:monospace;font-size:22px;color:#5d5;font-weight:700;">0</div>
+        </div>
+      </div>
+      <div id="warning" style="display:none;background:rgba(255,180,0,0.08);border:1px solid rgba(255,180,0,0.25);border-radius:12px;padding:10px 16px;color:#fa8;font-size:13px;text-align:center;">
+        Need at least 500 pts in one turn to get on the board
+      </div>
+      <div style="display:flex;gap:14px;">
+        <button id="roll-btn" onclick="handleRoll()" class="btn btn-blue" style="flex:2;">Roll Dice</button>
+        <button id="bank-btn" onclick="handleBank()" class="btn btn-green" style="flex:1;" disabled>Bank</button>
+      </div>
+      <div class="card" style="padding:14px 18px;">
+        <div class="lbl" style="margin-bottom:10px;">Quick Reference</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:12px;color:#888;">
+          <div>Single 1 &rarr; <span style="color:#7df;">100</span></div>
+          <div>Three 1s &rarr; <span style="color:#7df;">1,000</span></div>
+          <div>Single 5 &rarr; <span style="color:#7df;">50</span></div>
+          <div>Three 2s &rarr; <span style="color:#7df;">200</span></div>
+          <div>Three 5s &rarr; <span style="color:#7df;">500</span></div>
+          <div>Three 6s &rarr; <span style="color:#7df;">600</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex-shrink:0;">
+      <div class="card" style="min-width:200px;">
+        <div class="lbl" style="margin-bottom:16px;">Scoreboard</div>
+        <div id="scoreboard"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCORE-ONLY SCREEN
+══════════════════════════════════════════════════ -->
+<div id="scorer" class="screen">
+  <div id="scorer-bg" style="position:fixed;inset:0;z-index:0;transition:background 0.6s;"></div>
+  <div id="scorer-content">
+    <!-- Top bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:rgba(0,0,0,0.3);backdrop-filter:blur(8px);">
+      <button onclick="showScreen('mode-select')" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:6px 14px;font-size:13px;">Quit</button>
+      <div id="sc-round-lbl" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;color:rgba(255,255,255,0.5);"></div>
+      <button onclick="showSbOverlay()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:6px 14px;font-size:13px;">&#9776; Scores</button>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="scorer-progress" style="margin:0 24px;">
+      <div id="sc-progress" class="scorer-progress-fill" style="width:0%;"></div>
+    </div>
+
+    <!-- Player card -->
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;min-height:60vh;">
+      <div id="sc-turn-label" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:16px;">Current Turn</div>
+      <div id="sc-name" style="font-family:'Cinzel',serif;font-size:52px;font-weight:900;color:#fff;letter-spacing:2px;text-shadow:0 4px 32px rgba(0,0,0,0.5);margin-bottom:28px;line-height:1.1;"></div>
+      <div id="sc-prev-score" style="font-family:'Crimson Text',serif;font-size:18px;color:rgba(255,255,255,0.45);margin-bottom:4px;"></div>
+      <div id="sc-total" style="font-family:'Cinzel',serif;font-size:80px;font-weight:700;color:#fff;text-shadow:0 0 60px rgba(255,255,255,0.2);line-height:1;"></div>
+      <div id="sc-target-lbl" style="font-family:'Crimson Text',serif;font-size:14px;color:rgba(255,255,255,0.3);margin-top:8px;"></div>
+      <div id="sc-onboard-warn" style="display:none;margin-top:20px;padding:10px 20px;background:rgba(255,180,0,0.15);border:1px solid rgba(255,180,0,0.3);border-radius:20px;color:#fa8;font-size:13px;">First turn needs 500+ to get on the board</div>
+    </div>
+
+    <!-- Big action buttons -->
+    <div style="padding:0 24px 40px;display:flex;flex-direction:column;gap:16px;">
+      <button onclick="scorerBankClick()" id="sc-bank-btn" style="width:100%;padding:28px;border-radius:20px;background:linear-gradient(135deg,#1a6630,#2aaa44);border:none;color:#fff;font-family:'Cinzel',serif;font-size:28px;font-weight:700;letter-spacing:3px;box-shadow:0 8px 40px rgba(40,180,70,0.5);transition:all 0.2s;"
+        onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">BANK</button>
+      <button onclick="scorerBust()" style="width:100%;padding:22px;border-radius:20px;background:linear-gradient(135deg,#6a1010,#bb2222);border:none;color:#fff;font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:3px;box-shadow:0 8px 40px rgba(180,40,40,0.4);transition:all 0.2s;"
+        onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">BUST</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     GAME OVER
+══════════════════════════════════════════════════ -->
+<div id="gameover" class="screen">
+  <div style="max-width:460px;width:100%;padding:40px;text-align:center;">
+    <div style="font-size:72px;margin-bottom:16px;">&#127942;</div>
+    <h1 id="w-name" style="font-family:'Cinzel',serif;font-size:40px;font-weight:700;letter-spacing:4px;color:#ffd700;text-shadow:0 0 40px rgba(255,200,0,0.6);margin-bottom:8px;"></h1>
+    <p style="font-family:'Crimson Text',serif;font-size:20px;color:#aaa;font-style:italic;margin-bottom:8px;">wins with</p>
+    <p id="w-score" style="font-size:52px;font-family:monospace;font-weight:700;color:#ffd700;margin-bottom:40px;"></p>
+    <div class="card" style="margin-bottom:32px;padding:24px;"><div id="final-scores"></div></div>
+    <div style="display:flex;gap:12px;">
+      <button onclick="showScreen('mode-select')" style="flex:1;padding:14px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#ccc;font-size:15px;">Home</button>
+      <button onclick="startGame()" class="btn btn-blue" style="flex:1;font-size:15px;letter-spacing:2px;">PLAY AGAIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCOREBOARD OVERLAY (score-only mode)
+══════════════════════════════════════════════════ -->
+<div id="sb-overlay">
+  <div style="width:100%;max-width:480px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <h2 style="font-family:'Cinzel',serif;font-size:22px;letter-spacing:3px;color:#fff;">SCOREBOARD</h2>
+      <button onclick="hideSbOverlay()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:8px 16px;font-size:14px;">Close</button>
+    </div>
+    <div id="sb-list"></div>
+    <button onclick="hideSbOverlay()" class="btn btn-blue" style="width:100%;margin-top:28px;font-size:16px;letter-spacing:2px;">Back to Game</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     BANK DIAL MODAL (score-only)
+══════════════════════════════════════════════════ -->
+<div id="dial-modal">
+  <div class="dial-box">
+    <div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;color:#666;text-transform:uppercase;margin-bottom:4px;">Points to Bank</div>
+    <div id="pad-display" class="pad-display">0</div>
+
+    <!-- Quick-entry buttons for common scores -->
+    <div class="pad-quick" id="pad-quick-btns"></div>
+
+    <!-- Number pad -->
+    <div class="pad-grid">
+      <button class="pad-key" onclick="padKey('1')">1</button>
+      <button class="pad-key" onclick="padKey('2')">2</button>
+      <button class="pad-key" onclick="padKey('3')">3</button>
+      <button class="pad-key" onclick="padKey('4')">4</button>
+      <button class="pad-key" onclick="padKey('5')">5</button>
+      <button class="pad-key" onclick="padKey('6')">6</button>
+      <button class="pad-key" onclick="padKey('7')">7</button>
+      <button class="pad-key" onclick="padKey('8')">8</button>
+      <button class="pad-key" onclick="padKey('9')">9</button>
+      <button class="pad-key pad-key-zero" onclick="padKey('0')">0</button>
+      <button class="pad-key pad-key-del" onclick="padDel()">&#9003;</button>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:4px;">
+      <button onclick="dialCancel()" style="flex:1;padding:15px;border-radius:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#ccc;font-size:15px;font-family:'Cinzel',serif;letter-spacing:1px;">Cancel</button>
+      <button onclick="dialConfirm()" class="btn btn-green" style="flex:2;font-size:16px;letter-spacing:2px;">BANK IT</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Bank confirm modal (dice game) -->
+<div id="modal">
+  <div class="modal-box">
+    <div style="font-size:36px;margin-bottom:12px;">&#127974;</div>
+    <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:8px;letter-spacing:1px;">Banking ends your go</div>
+    <div style="font-family:'Crimson Text',serif;font-style:italic;color:#aaa;font-size:15px;margin-bottom:8px;">
+      You'll bank <span id="modal-pts" style="color:#5d5;font-weight:700;font-style:normal;font-family:monospace;font-size:18px;"></span>
+    </div>
+    <div style="color:#888;font-size:13px;margin-bottom:28px;">Continue?</div>
+    <div style="display:flex;gap:14px;">
+      <button onclick="cancelBank()" style="flex:1;padding:13px 0;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#ccc;font-size:14px;font-family:'Cinzel',serif;letter-spacing:1px;">No, keep rolling</button>
+      <button onclick="confirmBank()" class="btn btn-green" style="flex:1;padding:13px 0;font-size:14px;letter-spacing:1px;">Yes, bank it</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// GLOBAL STATE
+// ══════════════════════════════════════════════════
+var gameMode = 'device'; // 'device' | 'score'
+
+// Shared
+var WINNING = 5000;
+var players = [];
+var currentIdx = 0;
+var finalRound = false;
+var finalRoundQueue = [];
+var triggerIdx = null;
+var toastTimer = null;
+
+// Dice-game only
+var DOT_POS = {
+  1:[[50,50]],2:[[25,25],[75,75]],3:[[25,25],[50,50],[75,75]],
+  4:[[25,25],[75,25],[25,75],[75,75]],5:[[25,25],[75,25],[50,50],[25,75],[75,75]],
+  6:[[25,25],[75,25],[25,50],[75,50],[25,75],[75,75]]
+};
+var dice=[], selected=[], turnScore=0, phase='idle', pendingBankTotal=0;
+
+// Score-only number pad
+var padString = '0';
+
+// Setup
+var setupPlayerCount = 2;
+var setupTargetScore = 5000;
+var setupNames = [];
+var dragSrcIdx = null;
+
+// Player colours for scorer
+var PLAYER_COLORS = [
+  ['#1a2a5e','#0d1a3e'],['#2a1a0a','#3e2a0d'],['#1a3a1a','#0d2a0d'],
+  ['#3a1a2a','#2a0d1a'],['#1a3a3a','#0d2a2a'],['#3a2a0a','#2a1a0d'],
+  ['#2a0a3a','#1a0d2a'],['#3a1a1a','#2a0d0d'],['#0a2a3a','#0d1a2a'],
+  ['#2a3a0a','#1a2a0d'],['#3a0a2a','#2a0d1a'],['#0a3a1a','#0d2a0d']
+];
+
+// ══════════════════════════════════════════════════
+// SCREEN NAV
+// ══════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+}
+
+function chooseMode(mode) {
+  gameMode = mode;
+  // Update badge
+  var badge = document.getElementById('setup-mode-badge');
+  if (mode === 'device') {
+    badge.textContent = '&#127922; Play on Device';
+    badge.style.cssText = 'display:inline-block;padding:6px 18px;border-radius:20px;font-size:12px;font-family:Cinzel,serif;letter-spacing:2px;background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.3);color:#4af;';
+    document.getElementById('setup-ref').style.display = '';
+  } else {
+    badge.innerHTML = '&#9861;&#65039; Score Only';
+    badge.style.cssText = 'display:inline-block;padding:6px 18px;border-radius:20px;font-size:12px;font-family:Cinzel,serif;letter-spacing:2px;background:rgba(50,180,80,0.15);border:1px solid rgba(50,180,80,0.3);color:#5d5;';
+    document.getElementById('setup-ref').style.display = 'none';
+  }
+  showScreen('setup');
+  initStep1();
+}
+
+// ══════════════════════════════════════════════════
+// SETUP FLOW
+// ══════════════════════════════════════════════════
+function initStep1() {
+  var pcEl = document.getElementById('player-count-btns');
+  pcEl.innerHTML = '';
+  for (var n = 2; n <= 12; n++) {
+    (function(num) {
+      var b = document.createElement('button');
+      b.className = 'tog' + (setupPlayerCount === num ? ' active' : '');
+      b.textContent = num;
+      b.title = num + ' players';
+      b.onclick = function() {
+        setupPlayerCount = num;
+        document.querySelectorAll('#player-count-btns .tog').forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+      };
+      pcEl.appendChild(b);
+    })(n);
+  }
+  var tsEl = document.getElementById('target-score-btns');
+  tsEl.innerHTML = '';
+  for (var s = 5000; s <= 10000; s += 1000) {
+    (function(score) {
+      var b = document.createElement('button');
+      b.className = 'tog' + (setupTargetScore === score ? ' active' : '');
+      b.textContent = (score/1000) + 'k';
+      b.onclick = function() {
+        setupTargetScore = score;
+        document.querySelectorAll('#target-score-btns .tog').forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+      };
+      tsEl.appendChild(b);
+    })(s);
+  }
+  document.getElementById('step1-panel').style.display = 'block';
+  document.getElementById('step2-panel').style.display = 'none';
+}
+
+function goToStep2() {
+  while (setupNames.length < setupPlayerCount) setupNames.push('');
+  setupNames = setupNames.slice(0, setupPlayerCount);
+  document.getElementById('step2-summary').textContent = setupPlayerCount + ' players  \u2022  First to ' + setupTargetScore.toLocaleString();
+  renderPlayerInputs();
+  document.getElementById('step1-panel').style.display = 'none';
+  document.getElementById('step2-panel').style.display = 'block';
+}
+
+function goToStep1() {
+  saveNamesFromInputs();
+  initStep1();
+}
+
+function saveNamesFromInputs() {
+  for (var i = 0; i < setupPlayerCount; i++) {
+    var el = document.getElementById('pname-' + i);
+    if (el) setupNames[i] = el.value.trim();
+  }
+}
+
+function renderPlayerInputs() {
+  var c = document.getElementById('player-inputs');
+  c.innerHTML = '';
+  for (var i = 0; i < setupPlayerCount; i++) {
+    (function(idx) {
+      var row = document.createElement('div');
+      row.className = 'player-row';
+      row.draggable = true;
+      var handle = document.createElement('span');
+      handle.className = 'drag-handle';
+      handle.innerHTML = '&#9776;';
+      var num = document.createElement('div');
+      num.style.cssText = 'width:28px;height:28px;border-radius:50%;background:rgba(68,170,255,0.15);border:1px solid rgba(68,170,255,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;color:#4af;flex-shrink:0;';
+      num.textContent = idx + 1;
+      var inp = document.createElement('input');
+      inp.id = 'pname-' + idx;
+      inp.placeholder = 'Player ' + (idx + 1);
+      inp.value = setupNames[idx] || '';
+      inp.style.cssText = 'flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;color:#fff;font-size:15px;';
+      inp.onfocus = function(){ this.style.border='1px solid rgba(68,170,255,0.5)'; };
+      inp.onblur  = function(){ this.style.border='1px solid rgba(255,255,255,0.1)'; };
+      row.appendChild(handle); row.appendChild(num); row.appendChild(inp);
+      c.appendChild(row);
+      row.addEventListener('dragstart', function(e) {
+        saveNamesFromInputs(); dragSrcIdx = idx;
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(function(){ row.style.opacity='0.4'; }, 0);
+      });
+      row.addEventListener('dragend', function() {
+        row.style.opacity='1';
+        document.querySelectorAll('.player-row').forEach(function(r){ r.classList.remove('drag-over'); });
+      });
+      row.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.player-row').forEach(function(r){ r.classList.remove('drag-over'); });
+        if (idx !== dragSrcIdx) row.classList.add('drag-over');
+      });
+      row.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (dragSrcIdx === null || dragSrcIdx === idx) return;
+        var tmp = setupNames[dragSrcIdx]; setupNames[dragSrcIdx] = setupNames[idx]; setupNames[idx] = tmp;
+        dragSrcIdx = null; renderPlayerInputs();
+      });
+    })(i);
+  }
+}
+
+function getPlayerNames() {
+  saveNamesFromInputs();
+  var names = [];
+  for (var i = 0; i < setupPlayerCount; i++) names.push(setupNames[i] || ('Player ' + (i + 1)));
+  return names;
+}
+
+// ══════════════════════════════════════════════════
+// START GAME (routes to correct mode)
+// ══════════════════════════════════════════════════
+function startGame() {
+  WINNING = setupTargetScore;
+  var names = getPlayerNames();
+  players = [];
+  for (var i = 0; i < names.length; i++) players.push({ name: names[i], score: 0, onBoard: false });
+  currentIdx = 0; finalRound = false; finalRoundQueue = []; triggerIdx = null;
+
+  if (gameMode === 'score') {
+    startScorer();
+  } else {
+    dice = []; selected = []; turnScore = 0; phase = 'idle';
+    showScreen('game');
+    setMsg(players[0].name + "'s turn - roll to begin!");
+    updateRoundLabel();
+    renderAll();
+  }
+}
+
+// ══════════════════════════════════════════════════
+// SCORE-ONLY MODE
+// ══════════════════════════════════════════════════
+function startScorer() {
+  showScreen('scorer');
+  renderScorerPlayer();
+}
+
+function playerColor(idx) {
+  var c = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+  return 'linear-gradient(160deg,' + c[0] + ' 0%,' + c[1] + ' 100%)';
+}
+
+function renderScorerPlayer() {
+  var p = players[currentIdx];
+  document.getElementById('scorer-bg').style.background = playerColor(currentIdx);
+  document.getElementById('sc-name').textContent = p.name;
+  document.getElementById('sc-name').className = 'slideup';
+  document.getElementById('sc-total').textContent = p.score.toLocaleString();
+  document.getElementById('sc-total').className = 'pop';
+  document.getElementById('sc-prev-score').textContent = p.score > 0 ? 'Previous: ' + p.score.toLocaleString() : 'No score yet';
+  document.getElementById('sc-target-lbl').textContent = 'Target: ' + WINNING.toLocaleString();
+  document.getElementById('sc-onboard-warn').style.display = !p.onBoard ? 'block' : 'none';
+  // Progress bar
+  var pct = Math.min(100, Math.round((p.score / WINNING) * 100));
+  document.getElementById('sc-progress').style.width = pct + '%';
+  // Round label
+  document.getElementById('sc-round-lbl').textContent = finalRound ? '\uD83C\uDFC1 FINAL ROUND' : 'First to ' + WINNING.toLocaleString();
+  // Update bank button label if final round triggered
+  if (finalRound) document.getElementById('sc-turn-label').textContent = 'FINAL ROUND';
+  else document.getElementById('sc-turn-label').textContent = 'Current Turn';
+}
+
+function scorerBankClick() {
+  padString = '0';
+  padRefresh();
+  padRenderQuick();
+  document.getElementById('dial-modal').classList.add('show');
+}
+
+function scorerBust() {
+  scorerAdvance(false, 0, true);
+}
+
+function padKey(digit) {
+  if (padString === '0') padString = digit;
+  else if (padString.length < 6) padString += digit;
+  padRefresh();
+}
+
+function padDel() {
+  if (padString.length <= 1) padString = '0';
+  else padString = padString.slice(0, -1);
+  padRefresh();
+}
+
+function padRefresh() {
+  var val = parseInt(padString, 10) || 0;
+  var el = document.getElementById('pad-display');
+  el.textContent = val.toLocaleString();
+  el.style.color = val > 0 ? '#5d5' : '#555';
+}
+
+function padRenderQuick() {
+  // Common Farkle scores as quick-tap shortcuts
+  var common = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1200, 1500];
+  var c = document.getElementById('pad-quick-btns');
+  c.innerHTML = '';
+  common.forEach(function(v) {
+    var b = document.createElement('button');
+    b.className = 'pad-q-btn';
+    b.textContent = v.toLocaleString();
+    b.onclick = function() { padString = String(v); padRefresh(); };
+    c.appendChild(b);
+  });
+}
+
+function dialCancel() {
+  document.getElementById('dial-modal').classList.remove('show');
+}
+
+function dialConfirm() {
+  var val = parseInt(padString, 10) || 0;
+  if (val <= 0) {
+    showToast('Enter a score greater than 0');
+    return;
+  }
+  var p = players[currentIdx];
+  if (!p.onBoard && val < 500) {
+    showToast('\uD83D\uDEAB Need at least 500 pts to get on the board! (' + val + ' pts entered)');
+    return;
+  }
+  document.getElementById('dial-modal').classList.remove('show');
+  scorerAdvance(false, val, false);
+}
+
+function scorerAdvance(bust, earned, isBust) {
+  if (!bust && !isBust) {
+    players[currentIdx].score += earned;
+    if (earned >= 500) players[currentIdx].onBoard = true;
+  }
+
+  var triggered = !bust && !isBust && players[currentIdx].score >= WINNING;
+  var prevScore = players[currentIdx].score;
+
+  if (triggered && !finalRound) {
+    finalRound = true; triggerIdx = currentIdx;
+    finalRoundQueue = players.map(function(_,i){ return i; }).filter(function(i){ return i !== currentIdx; });
+    if (finalRoundQueue.length === 0) { endGame(); return; }
+    currentIdx = finalRoundQueue.shift();
+    renderScorerPlayer();
+    showToast('\uD83C\uDFC1 Final Round! ' + players[currentIdx].name + ', can you beat ' + prevScore.toLocaleString() + '?');
+    return;
+  }
+  if (finalRound) {
+    if (finalRoundQueue.length === 0) { endGame(); return; }
+    currentIdx = finalRoundQueue.shift();
+    renderScorerPlayer();
+    return;
+  }
+  currentIdx = (currentIdx + 1) % players.length;
+  renderScorerPlayer();
+}
+
+function showSbOverlay() {
+  var sorted = players.slice().sort(function(a,b){ return b.score - a.score; });
+  var list = document.getElementById('sb-list');
+  list.innerHTML = '';
+  sorted.forEach(function(p, i) {
+    var row = document.createElement('div');
+    var isLead = i === 0;
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:16px 20px;margin-bottom:10px;border-radius:14px;background:' + (isLead ? 'rgba(255,215,0,0.1)' : 'rgba(255,255,255,0.04)') + ';border:1px solid ' + (isLead ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.07)') + ';';
+    var needsBoard = !p.onBoard ? '<div style="font-size:11px;color:#888;margin-top:2px;">needs 500 to board</div>' : '';
+    row.innerHTML = '<div style="display:flex;align-items:center;gap:14px;"><div style="font-family:Cinzel,serif;font-size:18px;color:' + (isLead?'#ffd700':'#666') + ';width:24px;">' + (i+1) + '</div><div><div style="font-size:17px;color:' + (isLead?'#ffd700':'#ddd') + ';font-weight:' + (isLead?700:400) + ';">' + p.name + '</div>' + needsBoard + '</div></div><div style="font-family:monospace;font-size:22px;font-weight:700;color:' + (isLead?'#ffd700':'#fff') + ';">' + p.score.toLocaleString() + '</div>';
+    list.appendChild(row);
+  });
+  // Show target
+  var tgt = document.createElement('div');
+  tgt.style.cssText = 'text-align:center;font-size:12px;color:#555;margin-top:8px;font-family:Cinzel,serif;letter-spacing:2px;';
+  tgt.textContent = 'TARGET: ' + WINNING.toLocaleString();
+  list.appendChild(tgt);
+  document.getElementById('sb-overlay').classList.add('show');
+}
+
+function hideSbOverlay() {
+  document.getElementById('sb-overlay').classList.remove('show');
+}
+
+// ══════════════════════════════════════════════════
+// DICE GAME — SCORING ENGINE
+// ══════════════════════════════════════════════════
+function scoreDice(d) {
+  var counts=[0,0,0,0,0,0,0];
+  for(var i=0;i<d.length;i++) counts[d[i]]++;
+  var score=0,used=[0,0,0,0,0,0,0];
+  for(var f=1;f<=6;f++) if(counts[f]>=3){score+=f===1?1000:f*100;used[f]+=3;}
+  var r1=counts[1]-used[1]; score+=r1*100; used[1]+=r1;
+  var r5=counts[5]-used[5]; score+=r5*50;  used[5]+=r5;
+  var ul=used.slice(), mask=[];
+  for(var i=0;i<d.length;i++){if(ul[d[i]]>0){ul[d[i]]--;mask.push(true);}else mask.push(false);}
+  return {score:score,mask:mask};
+}
+function isBust(d){return scoreDice(d).score===0;}
+function allScore(d){var m=scoreDice(d).mask;for(var i=0;i<m.length;i++)if(!m[i])return false;return true;}
+function getSelectedScore(){var sub=[];for(var i=0;i<dice.length;i++)if(selected[i])sub.push(dice[i]);return scoreDice(sub).score;}
+
+// ── Render ────────────────────────────────────────
+function renderAll(){renderDice();renderScoreboard();renderCurrentPlayer();updateScoreDisplay();updateButtons();}
+
+function makeDie(val,cls,dotCls,clickFn){
+  var d=document.createElement('div'); d.className='die '+cls;
+  if(clickFn) d.onclick=clickFn;
+  (DOT_POS[val]||[]).forEach(function(pos){
+    var dot=document.createElement('div'); dot.className='dot '+dotCls;
+    dot.style.left=pos[0]+'%'; dot.style.top=pos[1]+'%'; d.appendChild(dot);
+  });
+  return d;
+}
+
+function renderDice(){
+  var tray=document.getElementById('dice-tray'); tray.innerHTML='';
+  if(dice.length===0){for(var i=0;i<6;i++){var d=document.createElement('div');d.className='die die-empty';tray.appendChild(d);}document.getElementById('legend').style.display='none';return;}
+  var res=scoreDice(dice), isHot=phase==='hotdice';
+  for(var i=0;i<dice.length;i++){
+    (function(idx){
+      var isSel=selected[idx]||isHot, isScoring=res.mask[idx], cls, dotCls, fn=null;
+      if(isSel){cls='die-selected';dotCls='dot-selected';}
+      else if(isScoring){cls='die-normal';dotCls='dot-normal';}
+      else{cls='die-dead';dotCls='dot-dead';}
+      if(!isHot&&phase==='rolled'&&isScoring) fn=function(){toggleDie(idx);};
+      tray.appendChild(makeDie(dice[idx],cls,dotCls,fn));
+    })(i);
+  }
+  document.getElementById('legend').style.display=phase==='rolled'?'flex':'none';
+}
+
+function renderScoreboard(){
+  var sb=document.getElementById('scoreboard'); sb.innerHTML='';
+  players.forEach(function(p,i){
+    var row=document.createElement('div'), isCur=i===currentIdx;
+    row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:6px;border-radius:10px;background:'+(isCur?'rgba(68,170,255,0.1)':'transparent')+';border:1px solid '+(isCur?'rgba(68,170,255,0.3)':'transparent')+';';
+    var star=(i===triggerIdx&&finalRound)?' <span style="font-size:10px;color:#fa4;">&#9733;</span>':'';
+    row.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><div style="width:8px;height:8px;border-radius:50%;background:'+(isCur?'#4af':p.onBoard?'#4a4':'#666')+';box-shadow:'+(isCur?'0 0 8px #4af':'none')+'"></div><span style="color:'+(isCur?'#7df':'#bbb')+';font-size:14px;font-weight:'+(isCur?600:400)+';">'+p.name+star+'</span></div><div style="display:flex;flex-direction:column;align-items:flex-end;"><span style="color:#fff;font-family:monospace;font-size:15px;font-weight:700;">'+p.score.toLocaleString()+'</span>'+(!p.onBoard?'<span style="color:#666;font-size:10px;">need 500</span>':'')+'</div>';
+    sb.appendChild(row);
+  });
+  if(finalRound){var b=document.createElement('div');b.style.cssText='margin-top:10px;padding:8px 12px;background:rgba(250,100,50,0.1);border:1px solid rgba(250,100,50,0.3);border-radius:8px;color:#fa8;font-size:12px;text-align:center;';b.textContent='\uD83C\uDFC1 Final Round!';sb.appendChild(b);}
+}
+
+function renderCurrentPlayer(){var p=players[currentIdx];if(!p)return;document.getElementById('cur-name').textContent=p.name;document.getElementById('cur-total').textContent=p.score.toLocaleString();}
+
+function updateScoreDisplay(){
+  var banked=phase==='rolled'?turnScore+getSelectedScore():turnScore;
+  document.getElementById('locked').textContent=turnScore.toLocaleString();
+  document.getElementById('if-banked').textContent=banked.toLocaleString();
+  var p=players[currentIdx];
+  document.getElementById('warning').style.display=(p&&!p.onBoard&&banked>0&&banked<500)?'block':'none';
+}
+
+function updateButtons(){
+  var rb=document.getElementById('roll-btn'),bb=document.getElementById('bank-btn');
+  var selScore=getSelectedScore(), hasSel=selected.some(function(s){return s;});
+  var canBank=phase==='rolled'&&hasSel&&selScore>0;
+  var canRoll=phase==='idle'||phase==='hotdice'||(phase==='rolled'&&hasSel&&selScore>0);
+  rb.disabled=!canRoll; bb.disabled=!canBank;
+  if(phase==='idle') rb.textContent='Roll Dice';
+  else if(phase==='hotdice') rb.textContent='\uD83D\uDD25 Roll All 6!';
+  else if(phase==='rolled') rb.textContent='Keep & Roll More';
+  else rb.textContent='Roll Dice';
+}
+
+function setMsg(txt,col){var el=document.getElementById('msg');el.textContent=txt;el.style.color=col||'#aaa';}
+function updateRoundLabel(){document.getElementById('round-lbl').textContent=finalRound?'\uD83C\uDFC1 FINAL ROUND':'First to '+WINNING.toLocaleString();}
+
+// ── Interaction ────────────────────────────────────
+function toggleDie(i){
+  if(phase!=='rolled')return;
+  if(!scoreDice(dice).mask[i])return;
+  selected[i]=!selected[i];
+  renderDice();updateScoreDisplay();updateButtons();
+}
+
+function rollN(n){var o=[];for(var i=0;i<n;i++)o.push(Math.floor(Math.random()*6)+1);return o;}
+
+function animateRoll(count,cb){
+  var tray=document.getElementById('dice-tray'); tray.innerHTML='';
+  for(var i=0;i<count;i++){
+    var d=document.createElement('div'); d.className='die die-normal spinning';
+    var v=Math.ceil(Math.random()*6);
+    (DOT_POS[v]||[]).forEach(function(pos){var dot=document.createElement('div');dot.className='dot dot-normal';dot.style.left=pos[0]+'%';dot.style.top=pos[1]+'%';d.appendChild(dot);});
+    tray.appendChild(d);
+  }
+  setTimeout(cb, 550);
+}
+
+function handleRoll(){
+  document.getElementById('roll-btn').disabled=true;
+  document.getElementById('bank-btn').disabled=true;
+  if(phase==='idle'){
+    turnScore=0; selected=[];
+    animateRoll(6,function(){dice=rollN(6);selected=new Array(6).fill(false);processRoll();});
+  } else if(phase==='hotdice'){
+    turnScore+=scoreDice(dice).score;
+    animateRoll(6,function(){dice=rollN(6);selected=new Array(6).fill(false);processRoll();});
+  } else if(phase==='rolled'){
+    var ss=getSelectedScore(); if(ss<=0){updateButtons();return;}
+    turnScore+=ss;
+    var rem=0; for(var i=0;i<selected.length;i++) if(!selected[i]) rem++;
+    var rc=rem===0?6:rem;
+    (function(n){animateRoll(n,function(){dice=rollN(n);selected=new Array(n).fill(false);processRoll();});})(rc);
+  }
+}
+
+function processRoll(){
+  if(!dice||dice.length===0||isBust(dice)){
+    phase='bust'; renderDice();updateScoreDisplay();updateButtons();
+    setMsg('Bust! No scoring dice. Turn over - 0 points.','#f88');
+    document.getElementById('legend').style.display='none';
+    setTimeout(function(){advanceTurn(true);},1800);
+  } else if(allScore(dice)){
+    phase='hotdice'; renderDice();updateScoreDisplay();updateButtons();
+    setMsg('Hot Dice! All dice score - you MUST roll all 6 again!','#fa4');
+  } else {
+    var res=scoreDice(dice), anyScoring=res.mask.some(function(m){return m;});
+    if(!anyScoring){
+      phase='bust'; renderDice();updateScoreDisplay();updateButtons();
+      setMsg('Bust! No scoring dice. Turn over - 0 points.','#f88');
+      document.getElementById('legend').style.display='none';
+      setTimeout(function(){advanceTurn(true);},1800);
+      return;
+    }
+    phase='rolled'; renderDice();updateScoreDisplay();updateButtons();
+    setMsg('Select scoring dice, then bank or keep rolling.');
+  }
+}
+
+// ── Bank (dice game) ───────────────────────────────
+function handleBank(){
+  if(phase!=='rolled')return;
+  var ss=getSelectedScore(); if(ss<=0)return;
+  var total=turnScore+ss, p=players[currentIdx];
+  if(p&&!p.onBoard&&total<500){showToast('\uD83D\uDEAB Need at least 500 pts to get on the board! ('+total+' pts so far)');return;}
+  pendingBankTotal=total;
+  document.getElementById('modal-pts').textContent=total.toLocaleString()+' pts';
+  document.getElementById('modal').classList.add('show');
+}
+function confirmBank(){document.getElementById('modal').classList.remove('show');advanceTurn(false,pendingBankTotal);}
+function cancelBank(){document.getElementById('modal').classList.remove('show');}
+
+// ── Advance turn (dice game) ───────────────────────
+function advanceTurn(bust,earned){
+  if(earned===undefined)earned=0;
+  if(!bust){players[currentIdx].score+=earned;if(earned>=500)players[currentIdx].onBoard=true;}
+  dice=[];selected=[];turnScore=0;phase='idle';
+  var triggered=!bust&&players[currentIdx].score>=WINNING, prevScore=players[currentIdx].score;
+  if(triggered&&!finalRound){
+    finalRound=true;triggerIdx=currentIdx;
+    finalRoundQueue=players.map(function(_,i){return i;}).filter(function(i){return i!==currentIdx;});
+    updateRoundLabel();
+    if(finalRoundQueue.length===0){endGame();return;}
+    currentIdx=finalRoundQueue.shift();renderAll();
+    setMsg('\uD83C\uDFC1 Final Round! '+players[currentIdx].name+', can you beat '+prevScore.toLocaleString()+'?');
+    return;
+  }
+  if(finalRound){
+    if(finalRoundQueue.length===0){endGame();return;}
+    currentIdx=finalRoundQueue.shift();renderAll();
+    setMsg('\uD83C\uDFC1 Final Round! '+players[currentIdx].name+', roll!');
+    return;
+  }
+  currentIdx=(currentIdx+1)%players.length;renderAll();
+  setMsg(players[currentIdx].name+"'s turn - roll to begin!");
+}
+
+// ── End game (shared) ──────────────────────────────
+function endGame(){
+  var sorted=players.slice().sort(function(a,b){return b.score-a.score;});
+  document.getElementById('w-name').textContent=sorted[0].name;
+  document.getElementById('w-score').textContent=sorted[0].score.toLocaleString();
+  var fs=document.getElementById('final-scores'); fs.innerHTML='';
+  sorted.forEach(function(p,i){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;justify-content:space-between;padding:10px 0;border-bottom:'+(i<sorted.length-1?'1px solid rgba(255,255,255,0.05)':'none')+';';
+    row.innerHTML='<span style="color:'+(i===0?'#ffd700':'#aaa')+';font-weight:'+(i===0?700:400)+';">'+(i+1)+'. '+p.name+'</span><span style="font-family:monospace;color:'+(i===0?'#ffd700':'#888')+';">'+p.score.toLocaleString()+'</span>';
+    fs.appendChild(row);
+  });
+  showScreen('gameover');
+}
+
+// ── Toast ──────────────────────────────────────────
+function showToast(msg){
+  var t=document.getElementById('toast'); t.textContent=msg; t.style.display='block';
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){t.style.display='none';},3500);
+}
+
+// ── Init ───────────────────────────────────────────
+// Nothing to init — wait for mode select
+</script>
+</body>
+</html>
