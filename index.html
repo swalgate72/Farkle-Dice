@@ -18,12 +18,6 @@ input::placeholder{color:rgba(255,255,255,0.25);font-style:italic;}
 #gameover{background:radial-gradient(ellipse at 50% 30%,#1a2a0a,#0a0a1a);align-items:center;justify-content:center;}
 #game{background:radial-gradient(ellipse at 20% 10%,#1a1a3e,#0a0a1a);flex-direction:column;}
 #scorer{flex-direction:column;min-height:100vh;}
-#order-select{background:radial-gradient(ellipse at 30% 20%,#1a1a3e,#0a0a1a);align-items:center;justify-content:center;overflow-y:auto;}
-.order-row{display:flex;gap:10px;margin-bottom:10px;align-items:center;border-radius:14px;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);}
-.order-row.first-player{background:rgba(68,200,80,0.1);border:1px solid rgba(68,200,80,0.3);}
-.order-drag{cursor:grab;color:#555;font-size:20px;padding:0 6px;user-select:none;flex-shrink:0;}
-.order-drag:active{cursor:grabbing;}
-.order-row.drag-over{outline:2px dashed rgba(68,170,255,0.4);background:rgba(68,170,255,0.06);}
 .card{background:rgba(255,255,255,0.03);border-radius:16px;border:1px solid rgba(255,255,255,0.08);padding:20px 24px;}
 .lbl{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#888;}
 .btn{border-radius:14px;padding:16px;font-family:'Cinzel',serif;letter-spacing:2px;font-size:15px;transition:all 0.2s;color:#fff;}
@@ -32,7 +26,6 @@ input::placeholder{color:rgba(255,255,255,0.25);font-style:italic;}
 .btn-green{background:linear-gradient(135deg,#1a5530,#2a8844);box-shadow:0 6px 24px rgba(50,180,80,0.3);}
 .btn-green:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 40px rgba(80,200,100,0.4);}
 .btn-red{background:linear-gradient(135deg,#7a1515,#cc3333);box-shadow:0 6px 24px rgba(200,50,50,0.3);}
-.btn-red:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 40px rgba(200,50,50,0.5);}
 button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important;box-shadow:none!important;cursor:not-allowed!important;transform:none!important;}
 .tog{padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);color:#888;transition:all 0.18s;min-width:52px;}
 .tog:hover{border-color:rgba(68,170,255,0.4);color:#aac;}
@@ -70,9 +63,9 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 .tally-minus{width:100%;padding:10px 0;border-radius:12px;font-size:20px;font-weight:700;color:#888;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);transition:all 0.12s;}
 .tally-minus:active{background:rgba(255,80,80,0.15);color:#f88;}
 .tally-minus:disabled{opacity:0.2;cursor:not-allowed;}
-#scorer-bg{position:fixed;inset:0;z-index:0;transition:background 0.6s;}
+#scorer-bg{position:absolute;inset:0;transition:background 0.5s;}
 #scorer-content{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;min-height:100vh;}
-.scorer-progress{height:6px;background:rgba(255,255,255,0.08);overflow:hidden;}
+.scorer-progress{height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;}
 .scorer-progress-fill{height:100%;border-radius:3px;transition:width 0.6s ease;background:linear-gradient(90deg,rgba(255,255,255,0.3),rgba(255,255,255,0.7));}
 #sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:250;flex-direction:column;align-items:center;justify-content:flex-start;padding:40px 24px;overflow-y:auto;}
 #sb-overlay.show{display:flex;}
@@ -86,24 +79,24 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 </head>
 <body>
 
+<!-- MODE SELECT -->
 <div id="mode-select" class="screen active">
   <div style="max-width:460px;width:100%;padding:40px 24px;text-align:center;">
     <div style="font-size:52px;margin-bottom:10px;">&#127922;</div>
     <h1 style="font-family:'Cinzel',serif;font-size:44px;font-weight:900;letter-spacing:4px;color:#fff;text-shadow:0 0 40px rgba(100,150,255,0.5);margin-bottom:8px;">FARKLE</h1>
     <p style="font-family:'Crimson Text',serif;font-size:17px;color:#88a;font-style:italic;margin-bottom:48px;">A game of dice and daring</p>
-    <div style="margin-bottom:20px;">
-      <button onclick="chooseMode('device')" style="width:100%;padding:28px 24px;border-radius:20px;background:linear-gradient(135deg,#1a2a5e,#2244aa);border:2px solid rgba(68,136,255,0.4);color:#fff;text-align:left;display:flex;align-items:center;gap:20px;transition:all 0.2s;margin-bottom:16px;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
-        <div style="font-size:40px;flex-shrink:0;">&#127922;</div>
-        <div><div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px;">Play on Device</div><div style="font-size:13px;color:rgba(255,255,255,0.6);font-family:'Crimson Text',serif;">I don't have dice &mdash; roll everything in the app</div></div>
-      </button>
-      <button onclick="chooseMode('score')" style="width:100%;padding:28px 24px;border-radius:20px;background:linear-gradient(135deg,#1a3a20,#2a6a35);border:2px solid rgba(50,180,80,0.4);color:#fff;text-align:left;display:flex;align-items:center;gap:20px;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
-        <div style="font-size:40px;flex-shrink:0;">&#9861;&#65039;</div>
-        <div><div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px;">Score Only</div><div style="font-size:13px;color:rgba(255,255,255,0.6);font-family:'Crimson Text',serif;">I have physical dice &mdash; just track the score</div></div>
-      </button>
-    </div>
+    <button onclick="chooseMode('device')" style="width:100%;padding:28px 24px;border-radius:20px;background:linear-gradient(135deg,#1a2a5e,#2244aa);border:2px solid rgba(68,136,255,0.4);color:#fff;text-align:left;display:flex;align-items:center;gap:20px;transition:all 0.2s;margin-bottom:16px;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+      <div style="font-size:40px;flex-shrink:0;">&#127922;</div>
+      <div><div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px;">Play on Device</div><div style="font-size:13px;color:rgba(255,255,255,0.6);font-family:'Crimson Text',serif;">I don't have dice &mdash; roll everything in the app</div></div>
+    </button>
+    <button onclick="chooseMode('score')" style="width:100%;padding:28px 24px;border-radius:20px;background:linear-gradient(135deg,#1a3a20,#2a6a35);border:2px solid rgba(50,180,80,0.4);color:#fff;text-align:left;display:flex;align-items:center;gap:20px;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+      <div style="font-size:40px;flex-shrink:0;">&#9861;&#65039;</div>
+      <div><div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px;">Score Only</div><div style="font-size:13px;color:rgba(255,255,255,0.6);font-family:'Crimson Text',serif;">I have physical dice &mdash; just track the score</div></div>
+    </button>
   </div>
 </div>
 
+<!-- SETUP -->
 <div id="setup" class="screen">
   <div style="max-width:500px;width:100%;padding:32px 24px;overflow-y:auto;">
     <div style="text-align:center;margin-bottom:32px;">
@@ -146,6 +139,7 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   </div>
 </div>
 
+<!-- DICE GAME -->
 <div id="game" class="screen">
   <div style="padding:18px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.05);">
     <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:4px;color:#fff;">&#127922; FARKLE</div>
@@ -188,16 +182,14 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   </div>
 </div>
 
+<!-- SCORE-ONLY -->
 <div id="scorer" class="screen">
   <div id="scorer-bg" style="position:fixed;inset:0;z-index:0;transition:background 0.6s;"></div>
   <div id="scorer-content">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:rgba(0,0,0,0.3);backdrop-filter:blur(8px);">
       <button onclick="showScreen('mode-select')" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:6px 14px;font-size:13px;">Quit</button>
       <div id="sc-round-lbl" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;color:rgba(255,255,255,0.5);"></div>
-      <div style="display:flex;gap:8px;">
-        <button id="undo-btn" onclick="scorerUndo()" title="Undo last turn" style="background:rgba(255,180,0,0.12);border:1px solid rgba(255,180,0,0.25);border-radius:8px;color:#fa8;padding:6px 14px;font-size:18px;opacity:0.3;transition:opacity 0.2s;">&#8592;</button>
-        <button onclick="showSbOverlay()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:6px 14px;font-size:13px;">&#9776; Scores</button>
-      </div>
+      <button onclick="showSbOverlay()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:6px 14px;font-size:13px;">&#9776; Scores</button>
     </div>
     <div class="scorer-progress" style="margin:0 24px;"><div id="sc-progress" class="scorer-progress-fill" style="width:0%;"></div></div>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;min-height:60vh;">
@@ -207,6 +199,7 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
       <div id="sc-total" style="font-family:'Cinzel',serif;font-size:80px;font-weight:700;color:#fff;text-shadow:0 0 60px rgba(255,255,255,0.2);line-height:1;"></div>
       <div id="sc-target-lbl" style="font-family:'Crimson Text',serif;font-size:14px;color:rgba(255,255,255,0.3);margin-top:8px;"></div>
       <div id="sc-onboard-warn" style="display:none;margin-top:20px;padding:10px 20px;background:rgba(255,180,0,0.15);border:1px solid rgba(255,180,0,0.3);border-radius:20px;color:#fa8;font-size:13px;">First turn needs 500+ to get on the board</div>
+      <div id="sc-required" style="display:none;margin-top:16px;padding:12px 24px;border-radius:20px;font-size:15px;font-family:'Cinzel',serif;letter-spacing:1px;"></div>
     </div>
     <div style="padding:0 24px 40px;display:flex;flex-direction:column;gap:16px;">
       <button onclick="scorerBankClick()" style="width:100%;padding:28px;border-radius:20px;background:linear-gradient(135deg,#1a6630,#2aaa44);border:none;color:#fff;font-family:'Cinzel',serif;font-size:28px;font-weight:700;letter-spacing:3px;box-shadow:0 8px 40px rgba(40,180,70,0.5);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">BANK</button>
@@ -215,6 +208,7 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   </div>
 </div>
 
+<!-- GAME OVER -->
 <div id="gameover" class="screen">
   <div style="max-width:460px;width:100%;padding:40px;text-align:center;">
     <div style="font-size:72px;margin-bottom:16px;">&#127942;</div>
@@ -229,20 +223,7 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   </div>
 </div>
 
-<div id="order-select" class="screen">
-  <div style="max-width:480px;width:100%;padding:32px 24px;">
-    <div style="text-align:center;margin-bottom:28px;">
-      <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;color:#5d5;text-transform:uppercase;margin-bottom:10px;">Score Only</div>
-      <h2 style="font-family:'Cinzel',serif;font-size:26px;font-weight:700;color:#fff;letter-spacing:2px;margin-bottom:8px;">Order of Play</h2>
-      <div id="order-first-label" style="font-family:'Crimson Text',serif;font-size:16px;color:#5d5;font-style:italic;margin-bottom:4px;"></div>
-      <div style="font-size:13px;color:#555;font-family:'Crimson Text',serif;">Drag to reorder so the dice pass naturally around your table</div>
-    </div>
-    <div id="order-list" style="margin-bottom:24px;"></div>
-    <button onclick="confirmOrder()" class="btn btn-green" style="width:100%;font-size:18px;font-weight:700;letter-spacing:3px;padding:20px;">START GAME &rarr;</button>
-    <button onclick="showScreen('setup')" style="width:100%;margin-top:12px;padding:12px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#666;font-size:13px;">&larr; Back to Setup</button>
-  </div>
-</div>
-
+<!-- SCOREBOARD OVERLAY -->
 <div id="sb-overlay">
   <div style="width:100%;max-width:480px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
@@ -254,43 +235,20 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   </div>
 </div>
 
+<!-- TALLY MODAL -->
 <div id="dial-modal">
   <div class="tally-box">
     <div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;color:#555;text-transform:uppercase;margin-bottom:6px;">Points to Bank</div>
-    <div id="tally-player-name" style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:#fff;letter-spacing:2px;margin-bottom:4px;"></div>
-    <div id="tally-replay-hint" style="display:none;font-family:'Crimson Text',serif;font-size:13px;color:#fa8;font-style:italic;margin-bottom:8px;padding:6px 12px;background:rgba(255,160,0,0.1);border-radius:8px;border:1px solid rgba(255,160,0,0.2);"></div>
+    <div id="tally-player-name" style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:#fff;letter-spacing:2px;margin-bottom:8px;"></div>
     <div id="tally-score" class="tally-score zero">0</div>
     <div id="tally-breakdown" class="tally-breakdown">&nbsp;</div>
     <div class="tally-row">
-      <div class="tally-col">
-        <div class="tally-denom">1000</div>
-        <div id="cnt-1000" class="tally-count">0</div>
-        <button class="tally-plus" onclick="tallyAdd(1000)">+</button>
-        <button class="tally-minus" id="min-1000" onclick="tallyRemove(1000)" disabled>&minus;</button>
-      </div>
-      <div class="tally-col">
-        <div class="tally-denom">500</div>
-        <div id="cnt-500" class="tally-count">0</div>
-        <button class="tally-plus" onclick="tallyAdd(500)">+</button>
-        <button class="tally-minus" id="min-500" onclick="tallyRemove(500)" disabled>&minus;</button>
-      </div>
-      <div class="tally-col">
-        <div class="tally-denom">100</div>
-        <div id="cnt-100" class="tally-count">0</div>
-        <button class="tally-plus" onclick="tallyAdd(100)">+</button>
-        <button class="tally-minus" id="min-100" onclick="tallyRemove(100)" disabled>&minus;</button>
-      </div>
-      <div class="tally-col">
-        <div class="tally-denom">50</div>
-        <div id="cnt-50" class="tally-count">0</div>
-        <button class="tally-plus" onclick="tallyAdd(50)">+</button>
-        <button class="tally-minus" id="min-50" onclick="tallyRemove(50)" disabled>&minus;</button>
-      </div>
+      <div class="tally-col"><div class="tally-denom">1000</div><div id="cnt-1000" class="tally-count">0</div><button class="tally-plus" onclick="tallyAdd(1000)">+</button><button class="tally-minus" id="min-1000" onclick="tallyRemove(1000)" disabled>&minus;</button></div>
+      <div class="tally-col"><div class="tally-denom">500</div><div id="cnt-500" class="tally-count">0</div><button class="tally-plus" onclick="tallyAdd(500)">+</button><button class="tally-minus" id="min-500" onclick="tallyRemove(500)" disabled>&minus;</button></div>
+      <div class="tally-col"><div class="tally-denom">100</div><div id="cnt-100" class="tally-count">0</div><button class="tally-plus" onclick="tallyAdd(100)">+</button><button class="tally-minus" id="min-100" onclick="tallyRemove(100)" disabled>&minus;</button></div>
+      <div class="tally-col"><div class="tally-denom">50</div><div id="cnt-50" class="tally-count">0</div><button class="tally-plus" onclick="tallyAdd(50)">+</button><button class="tally-minus" id="min-50" onclick="tallyRemove(50)" disabled>&minus;</button></div>
     </div>
-    <div style="display:flex;gap:8px;margin:14px 0 4px;">
-      <button onclick="tallyReset()" style="flex:1;padding:10px;border-radius:12px;background:rgba(255,80,80,0.08);border:1px solid rgba(255,80,80,0.2);color:#a66;font-size:13px;font-family:'Cinzel',serif;letter-spacing:1px;">CLEAR</button>
-      <button onclick="tallyBustConfirm()" style="flex:1;padding:10px;border-radius:12px;background:rgba(200,40,40,0.15);border:1px solid rgba(200,40,40,0.3);color:#f66;font-size:13px;font-family:'Cinzel',serif;letter-spacing:1px;">BUST</button>
-    </div>
+    <button onclick="tallyReset()" style="width:100%;margin:14px 0 4px;padding:10px;border-radius:12px;background:rgba(255,80,80,0.08);border:1px solid rgba(255,80,80,0.2);color:#a66;font-size:13px;font-family:'Cinzel',serif;letter-spacing:2px;">CLEAR</button>
     <div style="display:flex;gap:12px;margin-top:10px;">
       <button onclick="tallyCancel()" style="flex:1;padding:16px;border-radius:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#ccc;font-size:15px;font-family:'Cinzel',serif;letter-spacing:1px;">Cancel</button>
       <button onclick="tallyConfirm()" id="tally-confirm-btn" class="btn btn-green" style="flex:2;font-size:17px;letter-spacing:2px;" disabled>BANK IT</button>
@@ -321,13 +279,11 @@ var currentIdx=0;
 var finalRound=false;
 var finalRoundQueue=[];
 var triggerIdx=null;
+var leadingScore=0;
 var toastTimer=null;
 var DOT_POS={1:[[50,50]],2:[[25,25],[75,75]],3:[[25,25],[50,50],[75,75]],4:[[25,25],[75,25],[25,75],[75,75]],5:[[25,25],[75,25],[50,50],[25,75],[75,75]],6:[[25,25],[75,25],[25,50],[75,50],[25,75],[75,75]]};
 var dice=[],selected=[],turnScore=0,phase='idle',pendingBankTotal=0;
 var tallyCounts={1000:0,500:0,100:0,50:0};
-// Undo history for score-only mode
-var scorerHistory=[];   // array of {snapshot, turnResult} 
-var replayQueue=[];     // turns after undo point waiting to be confirmed
 var setupPlayerCount=2,setupTargetScore=5000,setupNames=[],dragSrcIdx=null;
 var PLAYER_COLORS=[['#1a2a5e','#0d1a3e'],['#2a1a0a','#3e2a0d'],['#1a3a1a','#0d2a0d'],['#3a1a2a','#2a0d1a'],['#1a3a3a','#0d2a2a'],['#3a2a0a','#2a1a0d'],['#2a0a3a','#1a0d2a'],['#3a1a1a','#2a0d0d'],['#0a2a3a','#0d1a2a'],['#2a3a0a','#1a2a0d'],['#3a0a2a','#2a0d1a'],['#0a3a1a','#0d2a0d']];
 
@@ -343,41 +299,20 @@ function chooseMode(mode){
 
 function initStep1(){
   var pcEl=document.getElementById('player-count-btns');pcEl.innerHTML='';
-  for(var n=2;n<=12;n++){(function(num){var b=document.createElement('button');b.className='tog'+(setupPlayerCount===num?' active':'');b.textContent=num;b.title=num+' players';b.onclick=function(){setupPlayerCount=num;document.querySelectorAll('#player-count-btns .tog').forEach(function(x){x.classList.remove('active');});b.classList.add('active');};pcEl.appendChild(b);})(n);}
+  for(var n=2;n<=12;n++){(function(num){var b=document.createElement('button');b.className='tog'+(setupPlayerCount===num?' active':'');b.textContent=num;b.onclick=function(){setupPlayerCount=num;document.querySelectorAll('#player-count-btns .tog').forEach(function(x){x.classList.remove('active');});b.classList.add('active');};pcEl.appendChild(b);})(n);}
   var tsEl=document.getElementById('target-score-btns');tsEl.innerHTML='';
   for(var s=5000;s<=10000;s+=1000){(function(score){var b=document.createElement('button');b.className='tog'+(setupTargetScore===score?' active':'');b.textContent=(score/1000)+'k';b.onclick=function(){setupTargetScore=score;document.querySelectorAll('#target-score-btns .tog').forEach(function(x){x.classList.remove('active');});b.classList.add('active');};tsEl.appendChild(b);})(s);}
   document.getElementById('step1-panel').style.display='block';
   document.getElementById('step2-panel').style.display='none';
 }
 
-function goToStep2(){
-  while(setupNames.length<setupPlayerCount)setupNames.push('');
-  setupNames=setupNames.slice(0,setupPlayerCount);
-  document.getElementById('step2-summary').textContent=setupPlayerCount+' players \u2022 First to '+setupTargetScore.toLocaleString();
-  renderPlayerInputs();
-  document.getElementById('step1-panel').style.display='none';
-  document.getElementById('step2-panel').style.display='block';
-}
-
+function goToStep2(){while(setupNames.length<setupPlayerCount)setupNames.push('');setupNames=setupNames.slice(0,setupPlayerCount);document.getElementById('step2-summary').textContent=setupPlayerCount+' players \u2022 First to '+setupTargetScore.toLocaleString();renderPlayerInputs();document.getElementById('step1-panel').style.display='none';document.getElementById('step2-panel').style.display='block';}
 function goToStep1(){saveNamesFromInputs();initStep1();}
-
 function saveNamesFromInputs(){for(var i=0;i<setupPlayerCount;i++){var el=document.getElementById('pname-'+i);if(el)setupNames[i]=el.value.trim();}}
 
 function renderPlayerInputs(){
   var c=document.getElementById('player-inputs');c.innerHTML='';
-  for(var i=0;i<setupPlayerCount;i++){
-    (function(idx){
-      var row=document.createElement('div');row.className='player-row';row.draggable=true;
-      var handle=document.createElement('span');handle.className='drag-handle';handle.innerHTML='&#9776;';
-      var num=document.createElement('div');num.style.cssText='width:28px;height:28px;border-radius:50%;background:rgba(68,170,255,0.15);border:1px solid rgba(68,170,255,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;color:#4af;flex-shrink:0;';num.textContent=idx+1;
-      var inp=document.createElement('input');inp.id='pname-'+idx;inp.placeholder='Player '+(idx+1);inp.value=setupNames[idx]||'';inp.style.cssText='flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;color:#fff;font-size:15px;';inp.onfocus=function(){this.style.border='1px solid rgba(68,170,255,0.5)';};inp.onblur=function(){this.style.border='1px solid rgba(255,255,255,0.1)';};
-      row.appendChild(handle);row.appendChild(num);row.appendChild(inp);c.appendChild(row);
-      row.addEventListener('dragstart',function(e){saveNamesFromInputs();dragSrcIdx=idx;e.dataTransfer.effectAllowed='move';setTimeout(function(){row.style.opacity='0.4';},0);});
-      row.addEventListener('dragend',function(){row.style.opacity='1';document.querySelectorAll('.player-row').forEach(function(r){r.classList.remove('drag-over');});});
-      row.addEventListener('dragover',function(e){e.preventDefault();document.querySelectorAll('.player-row').forEach(function(r){r.classList.remove('drag-over');});if(idx!==dragSrcIdx)row.classList.add('drag-over');});
-      row.addEventListener('drop',function(e){e.preventDefault();if(dragSrcIdx===null||dragSrcIdx===idx)return;var tmp=setupNames[dragSrcIdx];setupNames[dragSrcIdx]=setupNames[idx];setupNames[idx]=tmp;dragSrcIdx=null;renderPlayerInputs();});
-    })(i);
-  }
+  for(var i=0;i<setupPlayerCount;i++){(function(idx){var row=document.createElement('div');row.className='player-row';row.draggable=true;var handle=document.createElement('span');handle.className='drag-handle';handle.innerHTML='&#9776;';var num=document.createElement('div');num.style.cssText='width:28px;height:28px;border-radius:50%;background:rgba(68,170,255,0.15);border:1px solid rgba(68,170,255,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;color:#4af;flex-shrink:0;';num.textContent=idx+1;var inp=document.createElement('input');inp.id='pname-'+idx;inp.placeholder='Player '+(idx+1);inp.value=setupNames[idx]||'';inp.style.cssText='flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;color:#fff;font-size:15px;';inp.onfocus=function(){this.style.border='1px solid rgba(68,170,255,0.5)';};inp.onblur=function(){this.style.border='1px solid rgba(255,255,255,0.1)';};row.appendChild(handle);row.appendChild(num);row.appendChild(inp);c.appendChild(row);row.addEventListener('dragstart',function(e){saveNamesFromInputs();dragSrcIdx=idx;e.dataTransfer.effectAllowed='move';setTimeout(function(){row.style.opacity='0.4';},0);});row.addEventListener('dragend',function(){row.style.opacity='1';document.querySelectorAll('.player-row').forEach(function(r){r.classList.remove('drag-over');});});row.addEventListener('dragover',function(e){e.preventDefault();document.querySelectorAll('.player-row').forEach(function(r){r.classList.remove('drag-over');});if(idx!==dragSrcIdx)row.classList.add('drag-over');});row.addEventListener('drop',function(e){e.preventDefault();if(dragSrcIdx===null||dragSrcIdx===idx)return;var tmp=setupNames[dragSrcIdx];setupNames[dragSrcIdx]=setupNames[idx];setupNames[idx]=tmp;dragSrcIdx=null;renderPlayerInputs();});})(i);}
 }
 
 function getPlayerNames(){saveNamesFromInputs();var names=[];for(var i=0;i<setupPlayerCount;i++)names.push(setupNames[i]||('Player '+(i+1)));return names;}
@@ -387,111 +322,19 @@ function startGame(){
   var names=getPlayerNames();
   players=[];
   for(var i=0;i<names.length;i++)players.push({name:names[i],score:0,onBoard:false});
-  finalRound=false;finalRoundQueue=[];triggerIdx=null;
+  currentIdx=0;finalRound=false;finalRoundQueue=[];triggerIdx=null;leadingScore=0;
   if(gameMode==='score'){
-    // Randomly pick starting player for score-only mode
-    currentIdx=Math.floor(Math.random()*players.length);
-    showOrderScreen();
+    startScorer();
   } else {
-    currentIdx=0;
     dice=[];selected=[];turnScore=0;phase='idle';
     showScreen('game');
     setMsg(players[0].name+"'s turn - roll to begin!");
-    updateRoundLabel();
-    renderAll();
+    updateRoundLabel();renderAll();
   }
 }
 
-function startScorer(){
-  scorerHistory=[];
-  replayQueue=[];
-  showScreen('scorer');
-  renderScorerPlayer();
-}
-
-var orderDragSrc=null;
-var orderPlayerOrder=[]; // working array of player indices during reorder
-
-function showOrderScreen(){
-  // Build order starting from random first player, wrapping round
-  orderPlayerOrder=[];
-  for(var i=0;i<players.length;i++){
-    orderPlayerOrder.push((currentIdx+i)%players.length);
-  }
-  document.getElementById('order-first-label').textContent=
-    players[currentIdx].name+' goes first!';
-  renderOrderList();
-  showScreen('order-select');
-}
-
-function renderOrderList(){
-  var list=document.getElementById('order-list');
-  list.innerHTML='';
-  orderPlayerOrder.forEach(function(pIdx,pos){
-    (function(position, playerIndex){
-      var row=document.createElement('div');
-      row.className='order-row'+(position===0?' first-player':'');
-      row.draggable=true;
-
-      var handle=document.createElement('span');
-      handle.className='order-drag';
-      handle.innerHTML='&#9776;';
-
-      var badge=document.createElement('div');
-      badge.style.cssText='width:28px;height:28px;border-radius:50%;background:'+(position===0?'rgba(68,200,80,0.2)':'rgba(255,255,255,0.06)')+';border:1px solid '+(position===0?'rgba(68,200,80,0.4)':'rgba(255,255,255,0.12)')+';display:flex;align-items:center;justify-content:center;font-size:12px;color:'+(position===0?'#5d5':'#888')+';flex-shrink:0;font-family:Cinzel,serif;font-weight:700;';
-      badge.textContent=position+1;
-
-      var nameEl=document.createElement('div');
-      nameEl.style.cssText='flex:1;font-size:17px;color:'+(position===0?'#7f7':'#ddd')+';font-weight:'+(position===0?700:400)+';';
-      nameEl.textContent=players[playerIndex].name;
-
-      var tag=document.createElement('div');
-      if(position===0){
-        tag.style.cssText='font-family:Cinzel,serif;font-size:10px;letter-spacing:2px;color:#5d5;border:1px solid rgba(68,200,80,0.3);border-radius:8px;padding:3px 8px;';
-        tag.textContent='FIRST';
-      }
-
-      row.appendChild(handle);
-      row.appendChild(badge);
-      row.appendChild(nameEl);
-      if(position===0) row.appendChild(tag);
-
-      // Drag events
-      row.addEventListener('dragstart',function(e){
-        orderDragSrc=position;
-        e.dataTransfer.effectAllowed='move';
-        setTimeout(function(){row.style.opacity='0.4';},0);
-      });
-      row.addEventListener('dragend',function(){
-        row.style.opacity='1';
-        document.querySelectorAll('.order-row').forEach(function(r){r.classList.remove('drag-over');});
-      });
-      row.addEventListener('dragover',function(e){
-        e.preventDefault();
-        document.querySelectorAll('.order-row').forEach(function(r){r.classList.remove('drag-over');});
-        if(position!==orderDragSrc) row.classList.add('drag-over');
-      });
-      row.addEventListener('drop',function(e){
-        e.preventDefault();
-        if(orderDragSrc===null||orderDragSrc===position) return;
-        var moved=orderPlayerOrder.splice(orderDragSrc,1)[0];
-        orderPlayerOrder.splice(position,0,moved);
-        orderDragSrc=null;
-        renderOrderList();
-      });
-
-      list.appendChild(row);
-    })(pos, pIdx);
-  });
-}
-
-function confirmOrder(){
-  // Reorder players array to match orderPlayerOrder
-  var reordered=orderPlayerOrder.map(function(i){return players[i];});
-  players=reordered;
-  currentIdx=0; // first player in new order goes first
-  startScorer();
-}
+// SCORE-ONLY
+function startScorer(){showScreen('scorer');renderScorerPlayer();}
 
 function playerColor(idx){var c=PLAYER_COLORS[idx%PLAYER_COLORS.length];return 'linear-gradient(160deg,'+c[0]+' 0%,'+c[1]+' 100%)';}
 
@@ -508,378 +351,151 @@ function renderScorerPlayer(){
   var pct=Math.min(100,Math.round((p.score/WINNING)*100));
   document.getElementById('sc-progress').style.width=pct+'%';
   document.getElementById('sc-round-lbl').textContent=finalRound?'\uD83C\uDFC1 FINAL ROUND':'First to '+WINNING.toLocaleString();
-  document.getElementById('sc-turn-label').textContent=finalRound?'FINAL ROUND':'Current Turn';
+  if(finalRound) document.getElementById('sc-turn-label').textContent='FINAL ROUND';
+  else document.getElementById('sc-turn-label').textContent='Current Turn';
+
+  // Required score banner during final round
+  var reqEl=document.getElementById('sc-required');
+  if(finalRound&&reqEl){
+    var needed=leadingScore-p.score+50;
+    needed=Math.ceil(needed/50)*50;
+    if(needed<=0){
+      reqEl.textContent='You are in the lead!';
+      reqEl.style.cssText='display:block;margin-top:16px;padding:12px 24px;border-radius:20px;font-size:15px;font-family:Cinzel,serif;letter-spacing:1px;background:rgba(50,200,50,0.15);border:1px solid rgba(80,220,80,0.3);color:#5f5;';
+    } else {
+      reqEl.textContent='You need '+needed.toLocaleString()+' pts to win';
+      reqEl.style.cssText='display:block;margin-top:16px;padding:12px 24px;border-radius:20px;font-size:15px;font-family:Cinzel,serif;letter-spacing:1px;background:rgba(255,50,50,0.12);border:1px solid rgba(255,80,80,0.3);color:#faa;';
+    }
+  } else if(reqEl){
+    reqEl.style.display='none';
+  }
 }
 
-function scorerBankClick(){
-  tallyCounts={1000:0,500:0,100:0,50:0};
-  tallyRefresh();
-  document.getElementById('tally-player-name').textContent=players[currentIdx].name;
-  document.getElementById('dial-modal').classList.add('show');
-}
-
+function scorerBankClick(){tallyCounts={1000:0,500:0,100:0,50:0};tallyRefresh();document.getElementById('tally-player-name').textContent=players[currentIdx].name;document.getElementById('dial-modal').classList.add('show');}
 function scorerBust(){scorerAdvance(false,0,true);}
-
 function tallyTotal(){return tallyCounts[1000]*1000+tallyCounts[500]*500+tallyCounts[100]*100+tallyCounts[50]*50;}
-
-function tallyAdd(denom){tallyCounts[denom]++;tallyRefresh();}
-function tallyRemove(denom){if(tallyCounts[denom]>0)tallyCounts[denom]--;tallyRefresh();}
+function tallyAdd(d){tallyCounts[d]++;tallyRefresh();}
+function tallyRemove(d){if(tallyCounts[d]>0)tallyCounts[d]--;tallyRefresh();}
 function tallyReset(){tallyCounts={1000:0,500:0,100:0,50:0};tallyRefresh();}
-
 function tallyRefresh(){
-  var total=tallyTotal();
-  var denoms=[1000,500,100,50];
+  var total=tallyTotal(),denoms=[1000,500,100,50];
   denoms.forEach(function(d){document.getElementById('cnt-'+d).textContent=tallyCounts[d];document.getElementById('min-'+d).disabled=tallyCounts[d]===0;});
-  var scoreEl=document.getElementById('tally-score');
-  scoreEl.textContent=total>0?total.toLocaleString():'0';
-  scoreEl.className=total>0?'tally-score':'tally-score zero';
-  var parts=[];
-  denoms.forEach(function(d){if(tallyCounts[d]>0)parts.push(tallyCounts[d]+' x '+d);});
+  var scoreEl=document.getElementById('tally-score');scoreEl.textContent=total>0?total.toLocaleString():'0';scoreEl.className=total>0?'tally-score':'tally-score zero';
+  var parts=[];denoms.forEach(function(d){if(tallyCounts[d]>0)parts.push(tallyCounts[d]+' x '+d);});
   document.getElementById('tally-breakdown').textContent=parts.length>0?parts.join(' + '):'\u00a0';
   document.getElementById('tally-confirm-btn').disabled=total===0;
 }
-
-function tallyCancel(){
-  document.getElementById('dial-modal').classList.remove('show');
-  document.getElementById('tally-replay-hint').style.display='none';
-  replayQueue=[];
-}
-
+function tallyCancel(){document.getElementById('dial-modal').classList.remove('show');}
 function tallyConfirm(){
   var total=tallyTotal();
   if(total<=0){showToast('Add some points first');return;}
   var p=players[currentIdx];
   if(!p.onBoard&&total<500){showToast('\uD83D\uDEAB Need at least 500 pts to get on the board! ('+total+' pts)');return;}
   document.getElementById('dial-modal').classList.remove('show');
-  document.getElementById('tally-replay-hint').style.display='none';
   scorerAdvance(false,total,false);
-  checkReplayQueue();
-}
-
-function tallyBustConfirm(){
-  document.getElementById('dial-modal').classList.remove('show');
-  document.getElementById('tally-replay-hint').style.display='none';
-  scorerAdvance(false,0,true);
-  checkReplayQueue();
-}
-
-function checkReplayQueue(){
-  if(replayQueue.length>0){
-    var next=replayQueue.shift();
-    // next.snapshot is the state before that turn — but scorerAdvance
-    // has already moved currentIdx forward correctly, so we just need
-    // to open the tally for whoever is now current
-    setTimeout(function(){ openTallyForReplay(next); },350);
-  }
-}
-
-function snapshotState(){
-  return {
-    players: players.map(function(p){return {name:p.name,score:p.score,onBoard:p.onBoard};}),
-    currentIdx: currentIdx,
-    finalRound: finalRound,
-    finalRoundQueue: finalRoundQueue.slice(),
-    triggerIdx: triggerIdx
-  };
-}
-
-function restoreSnapshot(snap){
-  players = snap.players.map(function(p){return {name:p.name,score:p.score,onBoard:p.onBoard};});
-  currentIdx = snap.currentIdx;
-  finalRound = snap.finalRound;
-  finalRoundQueue = snap.finalRoundQueue.slice();
-  triggerIdx = snap.triggerIdx;
 }
 
 function scorerAdvance(bust,earned,isBust){
-  // Save snapshot BEFORE applying this turn
-  var snap = snapshotState();
-
   if(!bust&&!isBust){players[currentIdx].score+=earned;if(earned>=500)players[currentIdx].onBoard=true;}
   var triggered=!bust&&!isBust&&players[currentIdx].score>=WINNING;
   var prevScore=players[currentIdx].score;
 
-  // Push to history: snapshot = state before turn, result = what happened
-  scorerHistory.push({
-    snapshot: snap,
-    playerName: players[snap.currentIdx].name,
-    earned: (!bust&&!isBust)?earned:0,
-    wasBust: (bust||isBust)
-  });
-  updateUndoBtn();
-
   if(triggered&&!finalRound){
-    finalRound=true;triggerIdx=currentIdx;
-    finalRoundQueue=players.map(function(_,i){return i;}).filter(function(i){return i!==currentIdx;});
+    finalRound=true;triggerIdx=currentIdx;leadingScore=prevScore;
+    // Build queue in original seating order from the next player after trigger
+    finalRoundQueue=[];
+    for(var k=1;k<players.length;k++){
+      finalRoundQueue.push((currentIdx+k)%players.length);
+    }
     if(finalRoundQueue.length===0){endGame();return;}
     currentIdx=finalRoundQueue.shift();
     renderScorerPlayer();
     showToast('\uD83C\uDFC1 Final Round! '+players[currentIdx].name+', can you beat '+prevScore.toLocaleString()+'?');
     return;
   }
+
   if(finalRound){
+    // Update leading score if someone has overtaken
+    var best=0;
+    for(var i=0;i<players.length;i++){if(players[i].score>best)best=players[i].score;}
+    leadingScore=best;
     if(finalRoundQueue.length===0){endGame();return;}
     currentIdx=finalRoundQueue.shift();
     renderScorerPlayer();
     return;
   }
+
   currentIdx=(currentIdx+1)%players.length;
   renderScorerPlayer();
-}
-
-function updateUndoBtn(){
-  var btn=document.getElementById('undo-btn');
-  if(btn) btn.style.opacity = scorerHistory.length>0 ? '1' : '0.3';
-}
-
-function scorerUndo(){
-  if(scorerHistory.length===0){showToast('Nothing to undo');return;}
-  // Pop the last turn — this becomes the one we re-enter
-  var undoEntry=scorerHistory.pop();
-  // Any turns that were already popped into replayQueue stay there;
-  // the new undoEntry goes to the FRONT so it's played first
-  replayQueue.unshift(undoEntry);
-  // Restore state to before that turn
-  restoreSnapshot(undoEntry.snapshot);
-  updateUndoBtn();
-  renderScorerPlayer();
-  // Open tally pre-filled with original result
-  replayQueue.shift(); // remove it from queue since we're opening it now
-  openTallyForReplay(undoEntry);
-}
-
-function openTallyForReplay(entry){
-  // Pre-fill tally with original score
-  tallyCounts={1000:0,500:0,100:0,50:0};
-  if(!entry.wasBust && entry.earned>0){
-    // Decompose earned into denominations
-    var rem=entry.earned;
-    [1000,500,100,50].forEach(function(d){
-      tallyCounts[d]=Math.floor(rem/d);
-      rem=rem%d;
-    });
-  }
-  tallyRefresh();
-  document.getElementById('tally-player-name').textContent=players[currentIdx].name;
-  // Show replay context
-  var label = entry.wasBust ? 'was BUST' : 'scored '+entry.earned.toLocaleString();
-  document.getElementById('tally-replay-hint').style.display='block';
-  document.getElementById('tally-replay-hint').textContent='Previous result: '+label+' — adjust or confirm';
-  document.getElementById('dial-modal').classList.add('show');
 }
 
 function showSbOverlay(){
   var sorted=players.slice().sort(function(a,b){return b.score-a.score;});
   var list=document.getElementById('sb-list');list.innerHTML='';
-  sorted.forEach(function(p,i){
-    var row=document.createElement('div'),isLead=i===0;
-    row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:16px 20px;margin-bottom:10px;border-radius:14px;background:'+(isLead?'rgba(255,215,0,0.1)':'rgba(255,255,255,0.04)')+';border:1px solid '+(isLead?'rgba(255,215,0,0.3)':'rgba(255,255,255,0.07)')+';';
-    var needsBoard=!p.onBoard?'<div style="font-size:11px;color:#888;margin-top:2px;">needs 500 to board</div>':'';
-    row.innerHTML='<div style="display:flex;align-items:center;gap:14px;"><div style="font-family:Cinzel,serif;font-size:18px;color:'+(isLead?'#ffd700':'#666')+';width:24px;">'+(i+1)+'</div><div><div style="font-size:17px;color:'+(isLead?'#ffd700':'#ddd')+';font-weight:'+(isLead?700:400)+';">'+p.name+'</div>'+needsBoard+'</div></div><div style="font-family:monospace;font-size:22px;font-weight:700;color:'+(isLead?'#ffd700':'#fff')+';">'+p.score.toLocaleString()+'</div>';
-    list.appendChild(row);
-  });
+  sorted.forEach(function(p,i){var row=document.createElement('div'),isLead=i===0;row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:16px 20px;margin-bottom:10px;border-radius:14px;background:'+(isLead?'rgba(255,215,0,0.1)':'rgba(255,255,255,0.04)')+';border:1px solid '+(isLead?'rgba(255,215,0,0.3)':'rgba(255,255,255,0.07)')+';';var nb=!p.onBoard?'<div style="font-size:11px;color:#888;margin-top:2px;">needs 500 to board</div>':'';row.innerHTML='<div style="display:flex;align-items:center;gap:14px;"><div style="font-family:Cinzel,serif;font-size:18px;color:'+(isLead?'#ffd700':'#666')+';width:24px;">'+(i+1)+'</div><div><div style="font-size:17px;color:'+(isLead?'#ffd700':'#ddd')+';font-weight:'+(isLead?700:400)+';">'+p.name+'</div>'+nb+'</div></div><div style="font-family:monospace;font-size:22px;font-weight:700;color:'+(isLead?'#ffd700':'#fff')+';">'+p.score.toLocaleString()+'</div>';list.appendChild(row);});
   var tgt=document.createElement('div');tgt.style.cssText='text-align:center;font-size:12px;color:#555;margin-top:8px;font-family:Cinzel,serif;letter-spacing:2px;';tgt.textContent='TARGET: '+WINNING.toLocaleString();list.appendChild(tgt);
   document.getElementById('sb-overlay').classList.add('show');
 }
-
 function hideSbOverlay(){document.getElementById('sb-overlay').classList.remove('show');}
 
-function scoreDice(d){
-  var counts=[0,0,0,0,0,0,0];for(var i=0;i<d.length;i++)counts[d[i]]++;
-  var score=0,used=[0,0,0,0,0,0,0];
-  for(var f=1;f<=6;f++)if(counts[f]>=3){score+=f===1?1000:f*100;used[f]+=3;}
-  var r1=counts[1]-used[1];score+=r1*100;used[1]+=r1;
-  var r5=counts[5]-used[5];score+=r5*50;used[5]+=r5;
-  var ul=used.slice(),mask=[];
-  for(var i=0;i<d.length;i++){if(ul[d[i]]>0){ul[d[i]]--;mask.push(true);}else mask.push(false);}
-  return {score:score,mask:mask};
-}
+// DICE GAME
+function scoreDice(d){var counts=[0,0,0,0,0,0,0];for(var i=0;i<d.length;i++)counts[d[i]]++;var score=0,used=[0,0,0,0,0,0,0];for(var f=1;f<=6;f++)if(counts[f]>=3){score+=f===1?1000:f*100;used[f]+=3;}var r1=counts[1]-used[1];score+=r1*100;used[1]+=r1;var r5=counts[5]-used[5];score+=r5*50;used[5]+=r5;var ul=used.slice(),mask=[];for(var i=0;i<d.length;i++){if(ul[d[i]]>0){ul[d[i]]--;mask.push(true);}else mask.push(false);}return{score:score,mask:mask};}
 function isBust(d){return scoreDice(d).score===0;}
 function allScore(d){var m=scoreDice(d).mask;for(var i=0;i<m.length;i++)if(!m[i])return false;return true;}
 function getSelectedScore(){var sub=[];for(var i=0;i<dice.length;i++)if(selected[i])sub.push(dice[i]);return scoreDice(sub).score;}
-
 function renderAll(){renderDice();renderScoreboard();renderCurrentPlayer();updateScoreDisplay();updateButtons();}
-
-function makeDie(val,cls,dotCls,clickFn){
-  var d=document.createElement('div');d.className='die '+cls;
-  if(clickFn)d.onclick=clickFn;
-  (DOT_POS[val]||[]).forEach(function(pos){var dot=document.createElement('div');dot.className='dot '+dotCls;dot.style.left=pos[0]+'%';dot.style.top=pos[1]+'%';d.appendChild(dot);});
-  return d;
-}
-
-function renderDice(){
-  var tray=document.getElementById('dice-tray');tray.innerHTML='';
-  if(dice.length===0){for(var i=0;i<6;i++){var d=document.createElement('div');d.className='die die-empty';tray.appendChild(d);}document.getElementById('legend').style.display='none';return;}
-  var res=scoreDice(dice),isHot=phase==='hotdice';
-  for(var i=0;i<dice.length;i++){
-    (function(idx){
-      var isSel=selected[idx]||isHot,isScoring=res.mask[idx],cls,dotCls,fn=null;
-      if(isSel){cls='die-selected';dotCls='dot-selected';}else if(isScoring){cls='die-normal';dotCls='dot-normal';}else{cls='die-dead';dotCls='dot-dead';}
-      if(!isHot&&phase==='rolled'&&isScoring)fn=function(){toggleDie(idx);};
-      tray.appendChild(makeDie(dice[idx],cls,dotCls,fn));
-    })(i);
-  }
-  document.getElementById('legend').style.display=phase==='rolled'?'flex':'none';
-}
-
-function renderScoreboard(){
-  var sb=document.getElementById('scoreboard');sb.innerHTML='';
-  players.forEach(function(p,i){
-    var row=document.createElement('div'),isCur=i===currentIdx;
-    row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:6px;border-radius:10px;background:'+(isCur?'rgba(68,170,255,0.1)':'transparent')+';border:1px solid '+(isCur?'rgba(68,170,255,0.3)':'transparent')+';';
-    var star=(i===triggerIdx&&finalRound)?' <span style="font-size:10px;color:#fa4;">&#9733;</span>':'';
-    row.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><div style="width:8px;height:8px;border-radius:50%;background:'+(isCur?'#4af':p.onBoard?'#4a4':'#666')+';box-shadow:'+(isCur?'0 0 8px #4af':'none')+'"></div><span style="color:'+(isCur?'#7df':'#bbb')+';font-size:14px;font-weight:'+(isCur?600:400)+';">'+p.name+star+'</span></div><div style="display:flex;flex-direction:column;align-items:flex-end;"><span style="color:#fff;font-family:monospace;font-size:15px;font-weight:700;">'+p.score.toLocaleString()+'</span>'+(!p.onBoard?'<span style="color:#666;font-size:10px;">need 500</span>':'')+'</div>';
-    sb.appendChild(row);
-  });
-  if(finalRound){var b=document.createElement('div');b.style.cssText='margin-top:10px;padding:8px 12px;background:rgba(250,100,50,0.1);border:1px solid rgba(250,100,50,0.3);border-radius:8px;color:#fa8;font-size:12px;text-align:center;';b.textContent='\uD83C\uDFC1 Final Round!';sb.appendChild(b);}
-}
-
+function makeDie(val,cls,dotCls,clickFn){var d=document.createElement('div');d.className='die '+cls;if(clickFn)d.onclick=clickFn;(DOT_POS[val]||[]).forEach(function(pos){var dot=document.createElement('div');dot.className='dot '+dotCls;dot.style.left=pos[0]+'%';dot.style.top=pos[1]+'%';d.appendChild(dot);});return d;}
+function renderDice(){var tray=document.getElementById('dice-tray');tray.innerHTML='';if(dice.length===0){for(var i=0;i<6;i++){var d=document.createElement('div');d.className='die die-empty';tray.appendChild(d);}document.getElementById('legend').style.display='none';return;}var res=scoreDice(dice),isHot=phase==='hotdice';for(var i=0;i<dice.length;i++){(function(idx){var isSel=selected[idx]||isHot,isScoring=res.mask[idx],cls,dotCls,fn=null;if(isSel){cls='die-selected';dotCls='dot-selected';}else if(isScoring){cls='die-normal';dotCls='dot-normal';}else{cls='die-dead';dotCls='dot-dead';}if(!isHot&&phase==='rolled'&&isScoring)fn=function(){toggleDie(idx);};tray.appendChild(makeDie(dice[idx],cls,dotCls,fn));})(i);}document.getElementById('legend').style.display=phase==='rolled'?'flex':'none';}
+function renderScoreboard(){var sb=document.getElementById('scoreboard');sb.innerHTML='';players.forEach(function(p,i){var row=document.createElement('div'),isCur=i===currentIdx;row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:6px;border-radius:10px;background:'+(isCur?'rgba(68,170,255,0.1)':'transparent')+';border:1px solid '+(isCur?'rgba(68,170,255,0.3)':'transparent')+';';var star=(i===triggerIdx&&finalRound)?' <span style="font-size:10px;color:#fa4;">&#9733;</span>':'';row.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><div style="width:8px;height:8px;border-radius:50%;background:'+(isCur?'#4af':p.onBoard?'#4a4':'#666')+';box-shadow:'+(isCur?'0 0 8px #4af':'none')+'"></div><span style="color:'+(isCur?'#7df':'#bbb')+';font-size:14px;font-weight:'+(isCur?600:400)+';">'+p.name+star+'</span></div><div style="display:flex;flex-direction:column;align-items:flex-end;"><span style="color:#fff;font-family:monospace;font-size:15px;font-weight:700;">'+p.score.toLocaleString()+'</span>'+(!p.onBoard?'<span style="color:#666;font-size:10px;">need 500</span>':'')+'</div>';sb.appendChild(row);});if(finalRound){var b=document.createElement('div');b.style.cssText='margin-top:10px;padding:8px 12px;background:rgba(250,100,50,0.1);border:1px solid rgba(250,100,50,0.3);border-radius:8px;color:#fa8;font-size:12px;text-align:center;';b.textContent='\uD83C\uDFC1 Final Round!';sb.appendChild(b);}}
 function renderCurrentPlayer(){var p=players[currentIdx];if(!p)return;document.getElementById('cur-name').textContent=p.name;document.getElementById('cur-total').textContent=p.score.toLocaleString();}
-
-function updateScoreDisplay(){
-  var banked=phase==='rolled'?turnScore+getSelectedScore():turnScore;
-  document.getElementById('locked').textContent=turnScore.toLocaleString();
-  document.getElementById('if-banked').textContent=banked.toLocaleString();
-  var p=players[currentIdx];
-  document.getElementById('warning').style.display=(p&&!p.onBoard&&banked>0&&banked<500)?'block':'none';
-}
-
-function updateButtons(){
-  var rb=document.getElementById('roll-btn'),bb=document.getElementById('bank-btn');
-  var selScore=getSelectedScore(),hasSel=selected.some(function(s){return s;});
-  var canBank=phase==='rolled'&&hasSel&&selScore>0;
-  var canRoll=phase==='idle'||phase==='hotdice'||(phase==='rolled'&&hasSel&&selScore>0);
-  rb.disabled=!canRoll;bb.disabled=!canBank;
-  if(phase==='idle')rb.textContent='Roll Dice';
-  else if(phase==='hotdice')rb.textContent='\uD83D\uDD25 Roll All 6!';
-  else if(phase==='rolled')rb.textContent='Keep & Roll More';
-  else rb.textContent='Roll Dice';
-}
-
+function updateScoreDisplay(){var banked=phase==='rolled'?turnScore+getSelectedScore():turnScore;document.getElementById('locked').textContent=turnScore.toLocaleString();document.getElementById('if-banked').textContent=banked.toLocaleString();var p=players[currentIdx];document.getElementById('warning').style.display=(p&&!p.onBoard&&banked>0&&banked<500)?'block':'none';}
+function updateButtons(){var rb=document.getElementById('roll-btn'),bb=document.getElementById('bank-btn');var selScore=getSelectedScore(),hasSel=selected.some(function(s){return s;});var canBank=phase==='rolled'&&hasSel&&selScore>0;var canRoll=phase==='idle'||phase==='hotdice'||(phase==='rolled'&&hasSel&&selScore>0);rb.disabled=!canRoll;bb.disabled=!canBank;if(phase==='idle')rb.textContent='Roll Dice';else if(phase==='hotdice')rb.textContent='\uD83D\uDD25 Roll All 6!';else if(phase==='rolled')rb.textContent='Keep & Roll More';else rb.textContent='Roll Dice';}
 function setMsg(txt,col){var el=document.getElementById('msg');el.textContent=txt;el.style.color=col||'#aaa';}
 function updateRoundLabel(){document.getElementById('round-lbl').textContent=finalRound?'\uD83C\uDFC1 FINAL ROUND':'First to '+WINNING.toLocaleString();}
-
 function toggleDie(i){if(phase!=='rolled')return;if(!scoreDice(dice).mask[i])return;selected[i]=!selected[i];renderDice();updateScoreDisplay();updateButtons();}
-
 function rollN(n){var o=[];for(var i=0;i<n;i++)o.push(Math.floor(Math.random()*6)+1);return o;}
-
-function animateRoll(count,cb){
-  var tray=document.getElementById('dice-tray');tray.innerHTML='';
-  for(var i=0;i<count;i++){var d=document.createElement('div');d.className='die die-normal spinning';var v=Math.ceil(Math.random()*6);(DOT_POS[v]||[]).forEach(function(pos){var dot=document.createElement('div');dot.className='dot dot-normal';dot.style.left=pos[0]+'%';dot.style.top=pos[1]+'%';d.appendChild(dot);});tray.appendChild(d);}
-  setTimeout(cb,550);
-}
-
-function handleRoll(){
-  document.getElementById('roll-btn').disabled=true;document.getElementById('bank-btn').disabled=true;
-  if(phase==='idle'){turnScore=0;selected=[];animateRoll(6,function(){dice=rollN(6);selected=new Array(6).fill(false);processRoll();});}
-  else if(phase==='hotdice'){turnScore+=scoreDice(dice).score;animateRoll(6,function(){dice=rollN(6);selected=new Array(6).fill(false);processRoll();});}
-  else if(phase==='rolled'){
-    var ss=getSelectedScore();if(ss<=0){updateButtons();return;}
-    turnScore+=ss;
-    var rem=0;for(var i=0;i<selected.length;i++)if(!selected[i])rem++;
-    var rc=rem===0?6:rem;
-    (function(n){animateRoll(n,function(){dice=rollN(n);selected=new Array(n).fill(false);processRoll();});})(rc);
-  }
-}
-
-function processRoll(){
-  if(!dice||dice.length===0||isBust(dice)){
-    phase='bust';renderDice();updateScoreDisplay();updateButtons();
-    setMsg('Bust! No scoring dice. Turn over - 0 points.','#f88');
-    document.getElementById('legend').style.display='none';
-    setTimeout(function(){advanceTurn(true);},1800);
-  } else if(allScore(dice)){
-    phase='hotdice';renderDice();updateScoreDisplay();updateButtons();
-    setMsg('Hot Dice! All dice score - you MUST roll all 6 again!','#fa4');
-  } else {
-    var res=scoreDice(dice),anyScoring=res.mask.some(function(m){return m;});
-    if(!anyScoring){phase='bust';renderDice();updateScoreDisplay();updateButtons();setMsg('Bust! No scoring dice. Turn over - 0 points.','#f88');document.getElementById('legend').style.display='none';setTimeout(function(){advanceTurn(true);},1800);return;}
-    phase='rolled';renderDice();updateScoreDisplay();updateButtons();
-    setMsg('Select scoring dice, then bank or keep rolling.');
-  }
-}
-
-function handleBank(){
-  if(phase!=='rolled')return;
-  var ss=getSelectedScore();if(ss<=0)return;
-  var total=turnScore+ss,p=players[currentIdx];
-  if(p&&!p.onBoard&&total<500){showToast('\uD83D\uDEAB Need at least 500 pts to get on the board! ('+total+' pts so far)');return;}
-  pendingBankTotal=total;
-  document.getElementById('modal-pts').textContent=total.toLocaleString()+' pts';
-  document.getElementById('modal').classList.add('show');
-}
+function animateRoll(count,cb){var tray=document.getElementById('dice-tray');tray.innerHTML='';for(var i=0;i<count;i++){var d=document.createElement('div');d.className='die die-normal spinning';var v=Math.ceil(Math.random()*6);(DOT_POS[v]||[]).forEach(function(pos){var dot=document.createElement('div');dot.className='dot dot-normal';dot.style.left=pos[0]+'%';dot.style.top=pos[1]+'%';d.appendChild(dot);});tray.appendChild(d);}setTimeout(cb,550);}
+function handleRoll(){document.getElementById('roll-btn').disabled=true;document.getElementById('bank-btn').disabled=true;if(phase==='idle'){turnScore=0;selected=[];animateRoll(6,function(){dice=rollN(6);selected=new Array(6).fill(false);processRoll();});}else if(phase==='hotdice'){turnScore+=scoreDice(dice).score;animateRoll(6,function(){dice=rollN(6);selected=new Array(6).fill(false);processRoll();});}else if(phase==='rolled'){var ss=getSelectedScore();if(ss<=0){updateButtons();return;}turnScore+=ss;var rem=0;for(var i=0;i<selected.length;i++)if(!selected[i])rem++;var rc=rem===0?6:rem;(function(n){animateRoll(n,function(){dice=rollN(n);selected=new Array(n).fill(false);processRoll();});})(rc);}}
+function processRoll(){if(!dice||dice.length===0||isBust(dice)){phase='bust';renderDice();updateScoreDisplay();updateButtons();setMsg('Bust! No scoring dice. Turn over - 0 points.','#f88');document.getElementById('legend').style.display='none';setTimeout(function(){advanceTurn(true);},1800);}else if(allScore(dice)){phase='hotdice';renderDice();updateScoreDisplay();updateButtons();setMsg('Hot Dice! All dice score - you MUST roll all 6 again!','#fa4');}else{var res=scoreDice(dice),anyScoring=res.mask.some(function(m){return m;});if(!anyScoring){phase='bust';renderDice();updateScoreDisplay();updateButtons();setMsg('Bust! No scoring dice. Turn over - 0 points.','#f88');document.getElementById('legend').style.display='none';setTimeout(function(){advanceTurn(true);},1800);return;}phase='rolled';renderDice();updateScoreDisplay();updateButtons();setMsg('Select scoring dice, then bank or keep rolling.');}}
+function handleBank(){if(phase!=='rolled')return;var ss=getSelectedScore();if(ss<=0)return;var total=turnScore+ss,p=players[currentIdx];if(p&&!p.onBoard&&total<500){showToast('\uD83D\uDEAB Need at least 500 pts to get on the board! ('+total+' pts so far)');return;}pendingBankTotal=total;document.getElementById('modal-pts').textContent=total.toLocaleString()+' pts';document.getElementById('modal').classList.add('show');}
 function confirmBank(){document.getElementById('modal').classList.remove('show');advanceTurn(false,pendingBankTotal);}
 function cancelBank(){document.getElementById('modal').classList.remove('show');}
+function advanceTurn(bust,earned){if(earned===undefined)earned=0;if(!bust){players[currentIdx].score+=earned;if(earned>=500)players[currentIdx].onBoard=true;}dice=[];selected=[];turnScore=0;phase='idle';var triggered=!bust&&players[currentIdx].score>=WINNING,prevScore=players[currentIdx].score;if(triggered&&!finalRound){finalRound=true;triggerIdx=currentIdx;finalRoundQueue=players.map(function(_,i){return i;}).filter(function(i){return i!==currentIdx;});updateRoundLabel();if(finalRoundQueue.length===0){endGame();return;}currentIdx=finalRoundQueue.shift();renderAll();setMsg('\uD83C\uDFC1 Final Round! '+players[currentIdx].name+', can you beat '+prevScore.toLocaleString()+'?');return;}if(finalRound){if(finalRoundQueue.length===0){endGame();return;}currentIdx=finalRoundQueue.shift();renderAll();setMsg('\uD83C\uDFC1 Final Round! '+players[currentIdx].name+', roll!');return;}currentIdx=(currentIdx+1)%players.length;renderAll();setMsg(players[currentIdx].name+"'s turn - roll to begin!");}
+function endGame(){var sorted=players.slice().sort(function(a,b){return b.score-a.score;});document.getElementById('w-name').textContent=sorted[0].name;document.getElementById('w-score').textContent=sorted[0].score.toLocaleString();var fs=document.getElementById('final-scores');fs.innerHTML='';sorted.forEach(function(p,i){var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;padding:10px 0;border-bottom:'+(i<sorted.length-1?'1px solid rgba(255,255,255,0.05)':'none')+';';row.innerHTML='<span style="color:'+(i===0?'#ffd700':'#aaa')+';font-weight:'+(i===0?700:400)+';">'+(i+1)+'. '+p.name+'</span><span style="font-family:monospace;color:'+(i===0?'#ffd700':'#888')+';">'+p.score.toLocaleString()+'</span>';fs.appendChild(row);});showScreen('gameover');}
+function showToast(msg){var t=document.getElementById('toast');t.innerHTML=msg;t.style.display='block';if(toastTimer)clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.style.display='none';},3500);}
 
-function advanceTurn(bust,earned){
-  if(earned===undefined)earned=0;
-  if(!bust){players[currentIdx].score+=earned;if(earned>=500)players[currentIdx].onBoard=true;}
-  dice=[];selected=[];turnScore=0;phase='idle';
-  var triggered=!bust&&players[currentIdx].score>=WINNING,prevScore=players[currentIdx].score;
-  if(triggered&&!finalRound){
-    finalRound=true;triggerIdx=currentIdx;
-    finalRoundQueue=players.map(function(_,i){return i;}).filter(function(i){return i!==currentIdx;});
-    updateRoundLabel();
-    if(finalRoundQueue.length===0){endGame();return;}
-    currentIdx=finalRoundQueue.shift();renderAll();
-    setMsg('\uD83C\uDFC1 Final Round! '+players[currentIdx].name+', can you beat '+prevScore.toLocaleString()+'?');
-    return;
-  }
-  if(finalRound){if(finalRoundQueue.length===0){endGame();return;}currentIdx=finalRoundQueue.shift();renderAll();setMsg('\uD83C\uDFC1 Final Round! '+players[currentIdx].name+', roll!');return;}
-  currentIdx=(currentIdx+1)%players.length;renderAll();
-  setMsg(players[currentIdx].name+"'s turn - roll to begin!");
-}
-
-function endGame(){
-  var sorted=players.slice().sort(function(a,b){return b.score-a.score;});
-  document.getElementById('w-name').textContent=sorted[0].name;
-  document.getElementById('w-score').textContent=sorted[0].score.toLocaleString();
-  var fs=document.getElementById('final-scores');fs.innerHTML='';
-  sorted.forEach(function(p,i){var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;padding:10px 0;border-bottom:'+(i<sorted.length-1?'1px solid rgba(255,255,255,0.05)':'none')+';';row.innerHTML='<span style="color:'+(i===0?'#ffd700':'#aaa')+';font-weight:'+(i===0?700:400)+';">'+(i+1)+'. '+p.name+'</span><span style="font-family:monospace;color:'+(i===0?'#ffd700':'#888')+';">'+p.score.toLocaleString()+'</span>';fs.appendChild(row);});
-  showScreen('gameover');
-}
-
-function showToast(msg){
-  var t=document.getElementById('toast');t.innerHTML=msg;t.style.display='block';
-  if(toastTimer)clearTimeout(toastTimer);
-  toastTimer=setTimeout(function(){t.style.display='none';},3500);
-}
-
-// ── Keep-alive: prevent iPhone screen sleep ──────────────────────────────────
+// KEEP-ALIVE
 (function(){
-  // Silent looping video — most reliable method on iOS Safari
-  var video = document.createElement('video');
-  video.setAttribute('playsinline','');
-  video.setAttribute('muted','');
-  video.setAttribute('loop','');
-  video.style.cssText='position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;top:0;left:0;';
-  // Minimal valid MP4 (1x1 black frame, silent)
-  video.src='data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAsltZGF0AAACmQYF//+b3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE0MiByMjM4OSA5NTZjOGQ4IC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAxNCAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVhbmFseXplPTEgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTEgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz02IGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MyBiX3B5cmFtaWQ9MiByZWZzPTMgd2VpZ2h0cD0yIGtleWludD0yNTAga2V5aW50X21pbj0yNSBzY2VuZWN1dD00MCBpbnRyYV9yZWZyZXNoPTAgcmNfbG9va2FoZWFkPTQwIHJjPWNyZiBtYnRyZWU9MSBjcmY9MjMuMCBxY29tcD0wLjYwIHFwbWluPTAgcXBtYXg9NjkgcXBzdGVwPTQgaXBfcmF0aW89MS40MCBhcT0xOjEuMDAAgAAAAA9liIQAV/0KAABOAAMsYoAAAAA=';
-  document.body.appendChild(video);
-
-  function tryPlay(){ video.play().catch(function(){}); }
-
-  // iOS requires a user gesture before video can play
-  ['touchstart','touchend','click'].forEach(function(ev){
-    document.addEventListener(ev, tryPlay, {once:true, passive:true});
-  });
-
-  // Nudge every 30 seconds to keep session alive
-  setInterval(function(){
-    video.currentTime = 0;
-    video.play().catch(function(){});
-  }, 30000);
-
-  // Use Screen Wake Lock API where available (Chrome/Edge/Android)
-  if('wakeLock' in navigator){
-    function requestWakeLock(){
-      navigator.wakeLock.request('screen').catch(function(){});
+  var _noSleep=null,_enabled=false;
+  function NoSleep(){
+    var noop=function(){};
+    if('wakeLock' in navigator){
+      var lock=null;
+      this.enable=function(){
+        return navigator.wakeLock.request('screen').then(function(l){
+          lock=l;_enabled=true;
+          document.addEventListener('visibilitychange',function(){
+            if(document.visibilityState==='visible'&&_enabled){
+              navigator.wakeLock.request('screen').then(function(l2){lock=l2;}).catch(noop);
+            }
+          });
+        }).catch(noop);
+      };
+      this.disable=function(){_enabled=false;if(lock){lock.release().catch(noop);lock=null;}};
+    } else {
+      var video=document.createElement('video');
+      video.setAttribute('playsinline','');video.setAttribute('muted','');video.setAttribute('loop','');
+      video.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+      video.src='data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAsltZGF0AAACmQYF//+b3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE0MiByMjM4OSA5NTZjOGQ4IC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAxNCAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVhbmFseXplPTEgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTEgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz02IGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MyBiX3B5cmFtaWQ9MiByZWZzPTMgd2VpZ2h0cD0yIGtleWludD0yNTAga2V5aW50X21pbj0yNSBzY2VuZWN1dD00MCBpbnRyYV9yZWZyZXNoPTAgcmNfbG9va2FoZWFkPTQwIHJjPWNyZiBtYnRyZWU9MSBjcmY9MjMuMCBxY29tcD0wLjYwIHFwbWluPTAgcXBtYXg9NjkgcXBzdGVwPTQgaXBfcmF0aW89MS40MCBhcT0xOjEuMDAAgAAAAA9liIQAV/0KAABOAAMsYoAAAAA=';
+      document.body.appendChild(video);
+      this.enable=function(){_enabled=true;return video.play().catch(noop);};
+      this.disable=function(){_enabled=false;video.pause();};
     }
-    requestWakeLock();
-    document.addEventListener('visibilitychange', function(){
-      if(document.visibilityState === 'visible') requestWakeLock();
-    });
   }
+  _noSleep=new NoSleep();
+  function enableOnce(){if(_noSleep&&!_enabled)_noSleep.enable();document.removeEventListener('touchstart',enableOnce);document.removeEventListener('click',enableOnce);}
+  document.addEventListener('touchstart',enableOnce,{passive:true});
+  document.addEventListener('click',enableOnce,{passive:true});
 })();
 </script>
 </body>
