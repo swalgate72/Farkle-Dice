@@ -18,6 +18,12 @@ input::placeholder{color:rgba(255,255,255,0.25);font-style:italic;}
 #gameover{background:radial-gradient(ellipse at 50% 30%,#1a2a0a,#0a0a1a);align-items:center;justify-content:center;}
 #game{background:radial-gradient(ellipse at 20% 10%,#1a1a3e,#0a0a1a);flex-direction:column;}
 #scorer{flex-direction:column;min-height:100vh;}
+#order-select{background:radial-gradient(ellipse at 30% 20%,#1a1a3e,#0a0a1a);align-items:center;justify-content:center;overflow-y:auto;}
+.order-row{display:flex;gap:10px;margin-bottom:10px;align-items:center;border-radius:14px;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);}
+.order-row.first-player{background:rgba(68,200,80,0.1);border:1px solid rgba(68,200,80,0.3);}
+.order-drag{cursor:grab;color:#555;font-size:20px;padding:0 6px;user-select:none;flex-shrink:0;}
+.order-drag:active{cursor:grabbing;}
+.order-row.drag-over{outline:2px dashed rgba(68,170,255,0.4);background:rgba(68,170,255,0.06);}
 .card{background:rgba(255,255,255,0.03);border-radius:16px;border:1px solid rgba(255,255,255,0.08);padding:20px 24px;}
 .lbl{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#888;}
 .btn{border-radius:14px;padding:16px;font-family:'Cinzel',serif;letter-spacing:2px;font-size:15px;transition:all 0.2s;color:#fff;}
@@ -188,7 +194,10 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:rgba(0,0,0,0.3);backdrop-filter:blur(8px);">
       <button onclick="showScreen('mode-select')" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:6px 14px;font-size:13px;">Quit</button>
       <div id="sc-round-lbl" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;color:rgba(255,255,255,0.5);"></div>
-      <button onclick="showSbOverlay()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:6px 14px;font-size:13px;">&#9776; Scores</button>
+      <div style="display:flex;gap:8px;">
+        <button id="undo-btn" onclick="scorerUndo()" title="Undo last turn" style="background:rgba(255,180,0,0.12);border:1px solid rgba(255,180,0,0.25);border-radius:8px;color:#fa8;padding:6px 14px;font-size:18px;opacity:0.3;transition:opacity 0.2s;">&#8592;</button>
+        <button onclick="showSbOverlay()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:6px 14px;font-size:13px;">&#9776; Scores</button>
+      </div>
     </div>
     <div class="scorer-progress" style="margin:0 24px;"><div id="sc-progress" class="scorer-progress-fill" style="width:0%;"></div></div>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;min-height:60vh;">
@@ -220,6 +229,20 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   </div>
 </div>
 
+<div id="order-select" class="screen">
+  <div style="max-width:480px;width:100%;padding:32px 24px;">
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;color:#5d5;text-transform:uppercase;margin-bottom:10px;">Score Only</div>
+      <h2 style="font-family:'Cinzel',serif;font-size:26px;font-weight:700;color:#fff;letter-spacing:2px;margin-bottom:8px;">Order of Play</h2>
+      <div id="order-first-label" style="font-family:'Crimson Text',serif;font-size:16px;color:#5d5;font-style:italic;margin-bottom:4px;"></div>
+      <div style="font-size:13px;color:#555;font-family:'Crimson Text',serif;">Drag to reorder so the dice pass naturally around your table</div>
+    </div>
+    <div id="order-list" style="margin-bottom:24px;"></div>
+    <button onclick="confirmOrder()" class="btn btn-green" style="width:100%;font-size:18px;font-weight:700;letter-spacing:3px;padding:20px;">START GAME &rarr;</button>
+    <button onclick="showScreen('setup')" style="width:100%;margin-top:12px;padding:12px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#666;font-size:13px;">&larr; Back to Setup</button>
+  </div>
+</div>
+
 <div id="sb-overlay">
   <div style="width:100%;max-width:480px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
@@ -234,7 +257,8 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 <div id="dial-modal">
   <div class="tally-box">
     <div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;color:#555;text-transform:uppercase;margin-bottom:6px;">Points to Bank</div>
-    <div id="tally-player-name" style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:#fff;letter-spacing:2px;margin-bottom:8px;"></div>
+    <div id="tally-player-name" style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:#fff;letter-spacing:2px;margin-bottom:4px;"></div>
+    <div id="tally-replay-hint" style="display:none;font-family:'Crimson Text',serif;font-size:13px;color:#fa8;font-style:italic;margin-bottom:8px;padding:6px 12px;background:rgba(255,160,0,0.1);border-radius:8px;border:1px solid rgba(255,160,0,0.2);"></div>
     <div id="tally-score" class="tally-score zero">0</div>
     <div id="tally-breakdown" class="tally-breakdown">&nbsp;</div>
     <div class="tally-row">
@@ -263,7 +287,10 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
         <button class="tally-minus" id="min-50" onclick="tallyRemove(50)" disabled>&minus;</button>
       </div>
     </div>
-    <button onclick="tallyReset()" style="width:100%;margin:14px 0 4px;padding:10px;border-radius:12px;background:rgba(255,80,80,0.08);border:1px solid rgba(255,80,80,0.2);color:#a66;font-size:13px;font-family:'Cinzel',serif;letter-spacing:2px;">CLEAR</button>
+    <div style="display:flex;gap:8px;margin:14px 0 4px;">
+      <button onclick="tallyReset()" style="flex:1;padding:10px;border-radius:12px;background:rgba(255,80,80,0.08);border:1px solid rgba(255,80,80,0.2);color:#a66;font-size:13px;font-family:'Cinzel',serif;letter-spacing:1px;">CLEAR</button>
+      <button onclick="tallyBustConfirm()" style="flex:1;padding:10px;border-radius:12px;background:rgba(200,40,40,0.15);border:1px solid rgba(200,40,40,0.3);color:#f66;font-size:13px;font-family:'Cinzel',serif;letter-spacing:1px;">BUST</button>
+    </div>
     <div style="display:flex;gap:12px;margin-top:10px;">
       <button onclick="tallyCancel()" style="flex:1;padding:16px;border-radius:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#ccc;font-size:15px;font-family:'Cinzel',serif;letter-spacing:1px;">Cancel</button>
       <button onclick="tallyConfirm()" id="tally-confirm-btn" class="btn btn-green" style="flex:2;font-size:17px;letter-spacing:2px;" disabled>BANK IT</button>
@@ -298,6 +325,9 @@ var toastTimer=null;
 var DOT_POS={1:[[50,50]],2:[[25,25],[75,75]],3:[[25,25],[50,50],[75,75]],4:[[25,25],[75,25],[25,75],[75,75]],5:[[25,25],[75,25],[50,50],[25,75],[75,75]],6:[[25,25],[75,25],[25,50],[75,50],[25,75],[75,75]]};
 var dice=[],selected=[],turnScore=0,phase='idle',pendingBankTotal=0;
 var tallyCounts={1000:0,500:0,100:0,50:0};
+// Undo history for score-only mode
+var scorerHistory=[];   // array of {snapshot, turnResult} 
+var replayQueue=[];     // turns after undo point waiting to be confirmed
 var setupPlayerCount=2,setupTargetScore=5000,setupNames=[],dragSrcIdx=null;
 var PLAYER_COLORS=[['#1a2a5e','#0d1a3e'],['#2a1a0a','#3e2a0d'],['#1a3a1a','#0d2a0d'],['#3a1a2a','#2a0d1a'],['#1a3a3a','#0d2a2a'],['#3a2a0a','#2a1a0d'],['#2a0a3a','#1a0d2a'],['#3a1a1a','#2a0d0d'],['#0a2a3a','#0d1a2a'],['#2a3a0a','#1a2a0d'],['#3a0a2a','#2a0d1a'],['#0a3a1a','#0d2a0d']];
 
@@ -361,7 +391,7 @@ function startGame(){
   if(gameMode==='score'){
     // Randomly pick starting player for score-only mode
     currentIdx=Math.floor(Math.random()*players.length);
-    startScorer();
+    showOrderScreen();
   } else {
     currentIdx=0;
     dice=[];selected=[];turnScore=0;phase='idle';
@@ -373,12 +403,94 @@ function startGame(){
 }
 
 function startScorer(){
+  scorerHistory=[];
+  replayQueue=[];
   showScreen('scorer');
   renderScorerPlayer();
-  // Show who goes first as a toast after a brief delay
-  setTimeout(function(){
-    showToast('&#127922; ' + players[currentIdx].name + ' goes first!');
-  }, 500);
+}
+
+var orderDragSrc=null;
+var orderPlayerOrder=[]; // working array of player indices during reorder
+
+function showOrderScreen(){
+  // Build order starting from random first player, wrapping round
+  orderPlayerOrder=[];
+  for(var i=0;i<players.length;i++){
+    orderPlayerOrder.push((currentIdx+i)%players.length);
+  }
+  document.getElementById('order-first-label').textContent=
+    players[currentIdx].name+' goes first!';
+  renderOrderList();
+  showScreen('order-select');
+}
+
+function renderOrderList(){
+  var list=document.getElementById('order-list');
+  list.innerHTML='';
+  orderPlayerOrder.forEach(function(pIdx,pos){
+    (function(position, playerIndex){
+      var row=document.createElement('div');
+      row.className='order-row'+(position===0?' first-player':'');
+      row.draggable=true;
+
+      var handle=document.createElement('span');
+      handle.className='order-drag';
+      handle.innerHTML='&#9776;';
+
+      var badge=document.createElement('div');
+      badge.style.cssText='width:28px;height:28px;border-radius:50%;background:'+(position===0?'rgba(68,200,80,0.2)':'rgba(255,255,255,0.06)')+';border:1px solid '+(position===0?'rgba(68,200,80,0.4)':'rgba(255,255,255,0.12)')+';display:flex;align-items:center;justify-content:center;font-size:12px;color:'+(position===0?'#5d5':'#888')+';flex-shrink:0;font-family:Cinzel,serif;font-weight:700;';
+      badge.textContent=position+1;
+
+      var nameEl=document.createElement('div');
+      nameEl.style.cssText='flex:1;font-size:17px;color:'+(position===0?'#7f7':'#ddd')+';font-weight:'+(position===0?700:400)+';';
+      nameEl.textContent=players[playerIndex].name;
+
+      var tag=document.createElement('div');
+      if(position===0){
+        tag.style.cssText='font-family:Cinzel,serif;font-size:10px;letter-spacing:2px;color:#5d5;border:1px solid rgba(68,200,80,0.3);border-radius:8px;padding:3px 8px;';
+        tag.textContent='FIRST';
+      }
+
+      row.appendChild(handle);
+      row.appendChild(badge);
+      row.appendChild(nameEl);
+      if(position===0) row.appendChild(tag);
+
+      // Drag events
+      row.addEventListener('dragstart',function(e){
+        orderDragSrc=position;
+        e.dataTransfer.effectAllowed='move';
+        setTimeout(function(){row.style.opacity='0.4';},0);
+      });
+      row.addEventListener('dragend',function(){
+        row.style.opacity='1';
+        document.querySelectorAll('.order-row').forEach(function(r){r.classList.remove('drag-over');});
+      });
+      row.addEventListener('dragover',function(e){
+        e.preventDefault();
+        document.querySelectorAll('.order-row').forEach(function(r){r.classList.remove('drag-over');});
+        if(position!==orderDragSrc) row.classList.add('drag-over');
+      });
+      row.addEventListener('drop',function(e){
+        e.preventDefault();
+        if(orderDragSrc===null||orderDragSrc===position) return;
+        var moved=orderPlayerOrder.splice(orderDragSrc,1)[0];
+        orderPlayerOrder.splice(position,0,moved);
+        orderDragSrc=null;
+        renderOrderList();
+      });
+
+      list.appendChild(row);
+    })(pos, pIdx);
+  });
+}
+
+function confirmOrder(){
+  // Reorder players array to match orderPlayerOrder
+  var reordered=orderPlayerOrder.map(function(i){return players[i];});
+  players=reordered;
+  currentIdx=0; // first player in new order goes first
+  startScorer();
 }
 
 function playerColor(idx){var c=PLAYER_COLORS[idx%PLAYER_COLORS.length];return 'linear-gradient(160deg,'+c[0]+' 0%,'+c[1]+' 100%)';}
@@ -427,7 +539,11 @@ function tallyRefresh(){
   document.getElementById('tally-confirm-btn').disabled=total===0;
 }
 
-function tallyCancel(){document.getElementById('dial-modal').classList.remove('show');}
+function tallyCancel(){
+  document.getElementById('dial-modal').classList.remove('show');
+  document.getElementById('tally-replay-hint').style.display='none';
+  replayQueue=[];
+}
 
 function tallyConfirm(){
   var total=tallyTotal();
@@ -435,13 +551,63 @@ function tallyConfirm(){
   var p=players[currentIdx];
   if(!p.onBoard&&total<500){showToast('\uD83D\uDEAB Need at least 500 pts to get on the board! ('+total+' pts)');return;}
   document.getElementById('dial-modal').classList.remove('show');
+  document.getElementById('tally-replay-hint').style.display='none';
   scorerAdvance(false,total,false);
+  checkReplayQueue();
+}
+
+function tallyBustConfirm(){
+  document.getElementById('dial-modal').classList.remove('show');
+  document.getElementById('tally-replay-hint').style.display='none';
+  scorerAdvance(false,0,true);
+  checkReplayQueue();
+}
+
+function checkReplayQueue(){
+  if(replayQueue.length>0){
+    var next=replayQueue.shift();
+    // next.snapshot is the state before that turn — but scorerAdvance
+    // has already moved currentIdx forward correctly, so we just need
+    // to open the tally for whoever is now current
+    setTimeout(function(){ openTallyForReplay(next); },350);
+  }
+}
+
+function snapshotState(){
+  return {
+    players: players.map(function(p){return {name:p.name,score:p.score,onBoard:p.onBoard};}),
+    currentIdx: currentIdx,
+    finalRound: finalRound,
+    finalRoundQueue: finalRoundQueue.slice(),
+    triggerIdx: triggerIdx
+  };
+}
+
+function restoreSnapshot(snap){
+  players = snap.players.map(function(p){return {name:p.name,score:p.score,onBoard:p.onBoard};});
+  currentIdx = snap.currentIdx;
+  finalRound = snap.finalRound;
+  finalRoundQueue = snap.finalRoundQueue.slice();
+  triggerIdx = snap.triggerIdx;
 }
 
 function scorerAdvance(bust,earned,isBust){
+  // Save snapshot BEFORE applying this turn
+  var snap = snapshotState();
+
   if(!bust&&!isBust){players[currentIdx].score+=earned;if(earned>=500)players[currentIdx].onBoard=true;}
   var triggered=!bust&&!isBust&&players[currentIdx].score>=WINNING;
   var prevScore=players[currentIdx].score;
+
+  // Push to history: snapshot = state before turn, result = what happened
+  scorerHistory.push({
+    snapshot: snap,
+    playerName: players[snap.currentIdx].name,
+    earned: (!bust&&!isBust)?earned:0,
+    wasBust: (bust||isBust)
+  });
+  updateUndoBtn();
+
   if(triggered&&!finalRound){
     finalRound=true;triggerIdx=currentIdx;
     finalRoundQueue=players.map(function(_,i){return i;}).filter(function(i){return i!==currentIdx;});
@@ -459,6 +625,47 @@ function scorerAdvance(bust,earned,isBust){
   }
   currentIdx=(currentIdx+1)%players.length;
   renderScorerPlayer();
+}
+
+function updateUndoBtn(){
+  var btn=document.getElementById('undo-btn');
+  if(btn) btn.style.opacity = scorerHistory.length>0 ? '1' : '0.3';
+}
+
+function scorerUndo(){
+  if(scorerHistory.length===0){showToast('Nothing to undo');return;}
+  // Pop the last turn — this becomes the one we re-enter
+  var undoEntry=scorerHistory.pop();
+  // Any turns that were already popped into replayQueue stay there;
+  // the new undoEntry goes to the FRONT so it's played first
+  replayQueue.unshift(undoEntry);
+  // Restore state to before that turn
+  restoreSnapshot(undoEntry.snapshot);
+  updateUndoBtn();
+  renderScorerPlayer();
+  // Open tally pre-filled with original result
+  replayQueue.shift(); // remove it from queue since we're opening it now
+  openTallyForReplay(undoEntry);
+}
+
+function openTallyForReplay(entry){
+  // Pre-fill tally with original score
+  tallyCounts={1000:0,500:0,100:0,50:0};
+  if(!entry.wasBust && entry.earned>0){
+    // Decompose earned into denominations
+    var rem=entry.earned;
+    [1000,500,100,50].forEach(function(d){
+      tallyCounts[d]=Math.floor(rem/d);
+      rem=rem%d;
+    });
+  }
+  tallyRefresh();
+  document.getElementById('tally-player-name').textContent=players[currentIdx].name;
+  // Show replay context
+  var label = entry.wasBust ? 'was BUST' : 'scored '+entry.earned.toLocaleString();
+  document.getElementById('tally-replay-hint').style.display='block';
+  document.getElementById('tally-replay-hint').textContent='Previous result: '+label+' — adjust or confirm';
+  document.getElementById('dial-modal').classList.add('show');
 }
 
 function showSbOverlay(){
@@ -637,6 +844,43 @@ function showToast(msg){
   if(toastTimer)clearTimeout(toastTimer);
   toastTimer=setTimeout(function(){t.style.display='none';},3500);
 }
+
+// ── Keep-alive: prevent iPhone screen sleep ──────────────────────────────────
+(function(){
+  // Silent looping video — most reliable method on iOS Safari
+  var video = document.createElement('video');
+  video.setAttribute('playsinline','');
+  video.setAttribute('muted','');
+  video.setAttribute('loop','');
+  video.style.cssText='position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;top:0;left:0;';
+  // Minimal valid MP4 (1x1 black frame, silent)
+  video.src='data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAsltZGF0AAACmQYF//+b3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE0MiByMjM4OSA5NTZjOGQ4IC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAxNCAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVhbmFseXplPTEgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTEgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz02IGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MyBiX3B5cmFtaWQ9MiByZWZzPTMgd2VpZ2h0cD0yIGtleWludD0yNTAga2V5aW50X21pbj0yNSBzY2VuZWN1dD00MCBpbnRyYV9yZWZyZXNoPTAgcmNfbG9va2FoZWFkPTQwIHJjPWNyZiBtYnRyZWU9MSBjcmY9MjMuMCBxY29tcD0wLjYwIHFwbWluPTAgcXBtYXg9NjkgcXBzdGVwPTQgaXBfcmF0aW89MS40MCBhcT0xOjEuMDAAgAAAAA9liIQAV/0KAABOAAMsYoAAAAA=';
+  document.body.appendChild(video);
+
+  function tryPlay(){ video.play().catch(function(){}); }
+
+  // iOS requires a user gesture before video can play
+  ['touchstart','touchend','click'].forEach(function(ev){
+    document.addEventListener(ev, tryPlay, {once:true, passive:true});
+  });
+
+  // Nudge every 30 seconds to keep session alive
+  setInterval(function(){
+    video.currentTime = 0;
+    video.play().catch(function(){});
+  }, 30000);
+
+  // Use Screen Wake Lock API where available (Chrome/Edge/Android)
+  if('wakeLock' in navigator){
+    function requestWakeLock(){
+      navigator.wakeLock.request('screen').catch(function(){});
+    }
+    requestWakeLock();
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible') requestWakeLock();
+    });
+  }
+})();
 </script>
 </body>
 </html>
