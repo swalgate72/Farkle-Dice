@@ -169,15 +169,16 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   </div>
 </div>
 
-<!-- NEXT GAME SCREEN (campaign) -->
+<!-- NEXT GAME SCREEN (campaign) - combined players + order -->
 <div id="next-game-screen" class="screen">
   <div style="max-width:480px;width:100%;padding:32px 24px;overflow-y:auto;">
-    <div style="text-align:center;margin-bottom:24px;">
+    <div style="text-align:center;margin-bottom:20px;">
       <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:#fa8;text-transform:uppercase;margin-bottom:8px;">&#127942; Campaign</div>
       <div id="ng-game-num" style="font-family:'Cinzel',serif;font-size:28px;font-weight:700;color:#fff;margin-bottom:4px;"></div>
-      <div style="font-family:'Crimson Text',serif;font-size:14px;color:#666;font-style:italic;">Tick who is playing this game</div>
+      <div style="font-family:'Crimson Text',serif;font-size:14px;color:#666;font-style:italic;">&#10003; tick to include &bull; &#9650;&#9660; to reorder &bull; tap name to rename</div>
     </div>
     <div id="ng-player-list" style="margin-bottom:20px;"></div>
+    <div id="ng-first-label" style="text-align:center;font-family:'Crimson Text',serif;font-size:15px;color:#5d5;font-style:italic;margin-bottom:16px;"></div>
     <button onclick="startNextGame()" id="ng-start-btn" class="btn btn-green" style="width:100%;font-size:18px;font-weight:700;letter-spacing:3px;padding:20px;">START GAME &rarr;</button>
     <button onclick="showCampaignBoard()" style="width:100%;margin-top:12px;padding:14px;border-radius:14px;background:rgba(200,150,0,0.1);border:1px solid rgba(200,150,0,0.25);color:#fa8;font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;">&#127942; Campaign Scoreboard</button>
     <button onclick="endCampaign()" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,0.08);color:#555;font-size:13px;">End Campaign</button>
@@ -540,24 +541,97 @@ function confirmOrder(){
 }
 
 // ── CAMPAIGN ──────────────────────────────────────────────────────────────────
+// Campaign next-game player order (indices into campaign.players)
+var ngOrder = [];
+var ngRenameIdx = null;
+
 function showNextGameScreen(){
   if(!campaign)return;
   document.getElementById('ng-game-num').textContent='Game '+campaign.gameNum;
-  var list=document.getElementById('ng-player-list');list.innerHTML='';
-  campaign.players.forEach(function(p,i){
-    var row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:10px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);';
-    var cb=document.createElement('input');cb.type='checkbox';cb.id='ng-cb-'+i;cb.checked=p.active!==false;cb.style.cssText='width:22px;height:22px;accent-color:#5d5;flex-shrink:0;cursor:pointer;';
-    cb.onchange=function(){p.active=cb.checked;updateNgStartBtn();};
-    var label=document.createElement('label');label.htmlFor='ng-cb-'+i;label.style.cssText='flex:1;cursor:pointer;';
-    label.innerHTML='<div style="font-size:17px;color:#ddd;">'+p.name+'</div><div style="font-size:12px;color:#888;margin-top:2px;">'+p.wins+' win'+(p.wins!==1?'s':'')+' &bull; '+p.totalPts.toLocaleString()+' total pts</div>';
-    row.appendChild(cb);row.appendChild(label);
-    // Show wins stars
-    if(p.wins>0){var stars=document.createElement('div');stars.style.cssText='color:#ffd700;font-size:14px;';stars.textContent='\u2605'.repeat(Math.min(p.wins,5));row.appendChild(stars);}
-    list.appendChild(row);
-  });
-  updateNgStartBtn();
+  // Build order if first time or reset
+  if(ngOrder.length !== campaign.players.length){
+    ngOrder = campaign.players.map(function(_,i){return i;});
+  }
+  renderNgList();
   showScreen('next-game-screen');
+}
+
+function renderNgList(){
+  var list=document.getElementById('ng-player-list');list.innerHTML='';
+  var activeCount=ngOrder.filter(function(i){return campaign.players[i].active!==false;}).length;
+
+  ngOrder.forEach(function(pIdx, pos){
+    (function(position, playerIndex){
+      var p=campaign.players[playerIndex];
+      var isActive=p.active!==false;
+      var isFirst=position===0||(!isActive&&false); // first active player
+      // Find first active position
+      var firstActivePos=-1;
+      for(var x=0;x<ngOrder.length;x++){if(campaign.players[ngOrder[x]].active!==false){firstActivePos=x;break;}}
+      isFirst=(position===firstActivePos);
+
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:10px;border-radius:14px;background:'+(isFirst&&isActive?'rgba(68,200,80,0.1)':'rgba(255,255,255,0.04)')+';border:1px solid '+(isFirst&&isActive?'rgba(68,200,80,0.3)':'rgba(255,255,255,0.08)')+';opacity:'+(isActive?1:0.45)+';';
+
+      // Checkbox
+      var cb=document.createElement('input');cb.type='checkbox';cb.checked=isActive;
+      cb.style.cssText='width:22px;height:22px;accent-color:#5d5;flex-shrink:0;cursor:pointer;';
+      cb.onchange=function(){p.active=cb.checked;renderNgList();};
+      cb.addEventListener('touchend',function(e){e.stopPropagation();});
+
+      // Position badge
+      var badge=document.createElement('div');
+      badge.style.cssText='width:28px;height:28px;border-radius:50%;background:'+(isFirst&&isActive?'rgba(68,200,80,0.2)':'rgba(255,255,255,0.06)')+';border:1px solid '+(isFirst&&isActive?'rgba(68,200,80,0.4)':'rgba(255,255,255,0.1)')+';display:flex;align-items:center;justify-content:center;font-size:12px;color:'+(isFirst&&isActive?'#5d5':'#888')+';flex-shrink:0;font-weight:700;';
+      badge.textContent=isActive?(activeCount>0?String(getActivePosition(position)):''):'-';
+
+      // Name + stats (tap to rename)
+      var nameWrap=document.createElement('div');nameWrap.style.cssText='flex:1;cursor:pointer;';
+      nameWrap.innerHTML='<div style="font-size:16px;color:'+(isActive?'#ddd':'#666')+';">'+p.name+(isFirst&&isActive?' <span style="font-size:10px;color:#5d5;font-family:Cinzel,serif;letter-spacing:1px;">FIRST</span>':'')+'</div><div style="font-size:11px;color:#666;margin-top:2px;">'+(p.wins>0?'\u2605'.repeat(Math.min(p.wins,3))+' ':'')+p.wins+' win'+(p.wins!==1?'s':'')+' \u2022 '+p.totalPts.toLocaleString()+' pts</div>';
+      nameWrap.onclick=function(){startRename(playerIndex);};
+
+      // Up/down buttons
+      var btnWrap=document.createElement('div');btnWrap.style.cssText='display:flex;flex-direction:column;gap:4px;flex-shrink:0;';
+      var btnUp=document.createElement('button');btnUp.innerHTML='&#9650;';btnUp.style.cssText='width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:'+(position===0?'#333':'#aaa')+';font-size:12px;';btnUp.disabled=(position===0);
+      btnUp.onclick=function(){ngMovePlayer(position,-1);};
+      btnUp.addEventListener('touchend',function(e){e.preventDefault();if(!btnUp.disabled)ngMovePlayer(position,-1);});
+      var btnDn=document.createElement('button');btnDn.innerHTML='&#9660;';btnDn.style.cssText='width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:'+(position===ngOrder.length-1?'#333':'#aaa')+';font-size:12px;';btnDn.disabled=(position===ngOrder.length-1);
+      btnDn.onclick=function(){ngMovePlayer(position,1);};
+      btnDn.addEventListener('touchend',function(e){e.preventDefault();if(!btnDn.disabled)ngMovePlayer(position,1);});
+      btnWrap.appendChild(btnUp);btnWrap.appendChild(btnDn);
+
+      row.appendChild(cb);row.appendChild(badge);row.appendChild(nameWrap);row.appendChild(btnWrap);
+      list.appendChild(row);
+    })(pos, pIdx);
+  });
+
+  // First player label
+  var firstActive=ngOrder.find(function(i){return campaign.players[i].active!==false;});
+  var lbl=document.getElementById('ng-first-label');
+  if(firstActive!==undefined){lbl.textContent=campaign.players[firstActive].name+' goes first!';}
+  else{lbl.textContent='';}
+
+  updateNgStartBtn();
+}
+
+function getActivePosition(pos){
+  // Which active position (1,2,3...) is this player at
+  var count=0;
+  for(var x=0;x<ngOrder.length;x++){
+    if(campaign.players[ngOrder[x]].active!==false){count++;if(x===pos)return count;}
+  }
+  return '-';
+}
+
+function ngMovePlayer(pos, dir){
+  var n=pos+dir;if(n<0||n>=ngOrder.length)return;
+  var tmp=ngOrder[pos];ngOrder[pos]=ngOrder[n];ngOrder[n]=tmp;
+  renderNgList();
+}
+
+function startRename(playerIndex){
+  var p=campaign.players[playerIndex];
+  var newName=prompt('Rename player:',p.name);
+  if(newName&&newName.trim()){p.name=newName.trim();saveCampaign();renderNgList();}
 }
 
 function updateNgStartBtn(){
@@ -568,11 +642,13 @@ function updateNgStartBtn(){
 function startNextGame(){
   if(!campaign)return;
   WINNING=campaign.target;
-  var activePlayers=campaign.players.filter(function(p){return p.active!==false;});
-  players=activePlayers.map(function(p){return{name:p.name,score:0,onBoard:false,campaignRef:p};});
-  currentIdx=Math.floor(Math.random()*players.length);
+  // Build players in ngOrder, active only
+  var activePlayers=ngOrder.filter(function(i){return campaign.players[i].active!==false;}).map(function(i){return{name:campaign.players[i].name,score:0,onBoard:false,campaignRef:campaign.players[i]};});
+  players=activePlayers;
+  currentIdx=0; // first in ngOrder is already set as first player
   finalRound=false;finalRoundQueue=[];triggerIdx=null;leadingScore=0;
-  showOrderScreen(false);
+  firstRound=true;firstRoundStart=0;
+  startScorer();
 }
 
 function showCampaignBoard(){
