@@ -35,7 +35,7 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 #sc-grid{display:grid;width:100%;height:100%;flex:1;}
 .sc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 8px;border:2px solid rgba(255,255,255,0.08);cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;}
 .sc-tile::before{content:'';position:absolute;inset:0;background:inherit;opacity:0.18;}
-.sc-tile.current{border-color:rgba(255,255,255,0.7);box-shadow:inset 0 0 0 3px rgba(255,255,255,0.25),0 0 32px rgba(255,255,255,0.12);}
+.sc-tile.current{border-color:#fff;border-width:3px;box-shadow:inset 0 0 0 3px rgba(255,255,255,0.35),0 0 40px rgba(255,255,255,0.3),0 0 80px rgba(255,255,255,0.1);}
 .sc-tile.next-up{border-color:rgba(255,255,255,0.3);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.1);}
 .sc-tile-name{font-family:'Cinzel',serif;font-weight:700;color:#fff;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;line-height:1.2;position:relative;z-index:1;}
 .sc-tile-score{font-family:'Cinzel',serif;font-weight:700;color:#fff;text-align:center;position:relative;z-index:1;line-height:1.1;}
@@ -219,9 +219,9 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   <div class="score-modal-box">
     <div class="sm-player" id="sm-name"></div>
     <div class="sm-prev" id="sm-prev"></div>
-    <div id="sm-target" style="font-family:'Cinzel',serif;font-size:14px;font-weight:700;text-align:center;margin-bottom:8px;letter-spacing:1px;min-height:20px;transition:color 0.2s;"></div>
     <div id="sm-total" class="sm-total zero">0</div>
     <div id="sm-breakdown" class="sm-breakdown">&nbsp;</div>
+    <div id="sm-target" style="width:100%;padding:12px 14px;border-radius:14px;font-family:'Cinzel',serif;font-size:15px;font-weight:700;text-align:center;letter-spacing:1px;margin-bottom:16px;min-height:48px;display:flex;align-items:center;justify-content:center;transition:all 0.25s;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:#fff;"></div>
     <div class="sm-denoms">
       <div class="sm-denom-col">
         <div class="sm-denom-label">1000</div>
@@ -453,28 +453,16 @@ function renderGrid(){
   grid.style.gridTemplateColumns='repeat('+cols+',1fr)';
   grid.style.gridTemplateRows='repeat('+rows+',1fr)';
 
-  // Clockwise order: left col top→bottom, right col bottom→top
-  // Player at currentIdx goes to position 0 (top-left)
-  var cwOrder=[];
-  for(var i=0;i<n;i++)cwOrder.push((currentIdx+i)%n);
-
-  // Map to grid cells clockwise:
-  // positions: 0=top-left going down left side, then up right side
-  // For a 2-col grid of R rows:
-  // Left col (col 0): row 0..R-1 → position index 0..R-1
-  // Right col (col 1): row R-1..0 → position index R..2R-1
-  // So player at cwOrder[pos] goes to grid cell:
-  //   pos < rows → col=0, row=pos
-  //   pos >= rows → col=1, row=rows-1-(pos-rows)
-
+  // Fixed positions: player 0 always top-left, player 1 top-right, etc.
+  // Left col top→bottom fills first, right col top→bottom fills second
   var nextIdx=(currentIdx+1)%n;
 
   for(var pos=0;pos<n;pos++){
-    var pIdx=cwOrder[pos];
+    var pIdx=pos; // fixed — player index = grid position
     var p=players[pIdx];
-    var col,row;
-    if(pos<rows){col=0;row=pos;}
-    else{col=1;row=rows-1-(pos-rows);}
+    var gridCol,gridRow;
+    if(pos<rows){gridCol=0;gridRow=pos;}
+    else{gridCol=1;gridRow=pos-rows;}
 
     (function(playerIndex,gridRow,gridCol,position){
       var isCurrent=playerIndex===currentIdx;
@@ -570,6 +558,40 @@ function smRefresh(){
   denoms.forEach(function(d){if(smCounts[d]>0)parts.push(smCounts[d]+' x '+d);});
   document.getElementById('sm-breakdown').textContent=parts.length>0?parts.join(' + '):'\u00a0';
   document.getElementById('sm-save-btn').disabled=total===0;
+  // Live target banner
+  var tgt=document.getElementById('sm-target');
+  if(tgt&&smPlayerIdx>=0){
+    var p=players[smPlayerIdx];
+    var newScore=p.score+total;
+    var txt='',col='rgba(255,255,255,0.7)',bg='rgba(255,255,255,0.05)',bdr='rgba(255,255,255,0.1)';
+    if(!p.onBoard&&total===0){
+      txt='Need 500 pts this turn to get on the board';
+      col='#ffcc44';bg='rgba(255,180,0,0.08)';bdr='rgba(255,180,0,0.25)';
+    } else if(!p.onBoard&&total>0&&total<500){
+      txt='Need '+(500-total)+' more to get on the board';
+      col='#ffcc44';bg='rgba(255,180,0,0.12)';bdr='rgba(255,180,0,0.35)';
+    } else if(!p.onBoard&&total>=500){
+      txt='This gets you on the board!';
+      col='#88ee88';bg='rgba(80,200,80,0.1)';bdr='rgba(80,200,80,0.3)';
+    } else if(finalRound&&leadingScore>0){
+      var need=Math.ceil((leadingScore-newScore+50)/50)*50;
+      if(need<=0){txt='★ This score wins!';col='#5f5';bg='rgba(50,200,80,0.15)';bdr='rgba(80,220,80,0.4)';}
+      else{txt='Need '+need.toLocaleString()+' to beat the leader';col='#ffaa66';bg='rgba(255,120,40,0.12)';bdr='rgba(255,120,40,0.3)';}
+    } else {
+      var toTarget=Math.max(0,WINNING-newScore);
+      if(toTarget===0){txt='★ This hits the target!';col='#ffd700';bg='rgba(220,180,0,0.15)';bdr='rgba(220,180,0,0.4)';}
+      else if(total===0){txt='Need '+(WINNING-p.score).toLocaleString()+' pts to reach '+WINNING.toLocaleString();col='rgba(255,255,255,0.65)';bg='rgba(255,255,255,0.05)';bdr='rgba(255,255,255,0.1)';}
+      else{
+        txt='Need '+toTarget.toLocaleString()+' more after this';
+        var imp=toTarget<(WINNING-p.score);
+        col=imp?'#88ee88':'rgba(255,255,255,0.7)';bg=imp?'rgba(80,200,80,0.1)':'rgba(255,255,255,0.05)';bdr=imp?'rgba(80,200,80,0.28)':'rgba(255,255,255,0.1)';
+      }
+    }
+    tgt.textContent=txt;
+    tgt.style.color='#fff';
+    tgt.style.background=bg;
+    tgt.style.borderColor=bdr;
+  }
 }
 
 function smTotal(){return smCounts[1000]*1000+smCounts[500]*500+smCounts[100]*100+smCounts[50]*50;}
