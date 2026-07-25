@@ -39,7 +39,7 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 .sc-tile.next-up{border-color:rgba(255,255,255,0.3);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.1);}
 .sc-tile-name{font-family:'Cinzel',serif;font-weight:700;color:#fff;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;line-height:1.2;position:relative;z-index:1;}
 .sc-tile-score{font-family:'Cinzel',serif;font-weight:700;color:#fff;text-align:center;position:relative;z-index:1;line-height:1.1;}
-.sc-tile-sub{font-family:'Crimson Text',serif;font-size:11px;color:rgba(255,255,255,0.5);text-align:center;position:relative;z-index:1;margin-top:3px;}
+.sc-tile-sub{font-family:'Cinzel',serif;font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);text-align:center;position:relative;z-index:1;margin-top:5px;letter-spacing:0.5px;}
 .sc-tile-badge{position:absolute;top:6px;right:8px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:rgba(255,255,255,0.4);z-index:1;}
 .sc-tile.current .sc-tile-badge{color:rgba(255,255,255,0.8);}
 /* Score modal */
@@ -219,6 +219,7 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   <div class="score-modal-box">
     <div class="sm-player" id="sm-name"></div>
     <div class="sm-prev" id="sm-prev"></div>
+    <div id="sm-target" style="font-family:'Cinzel',serif;font-size:14px;font-weight:700;text-align:center;margin-bottom:8px;letter-spacing:1px;min-height:20px;transition:color 0.2s;"></div>
     <div id="sm-total" class="sm-total zero">0</div>
     <div id="sm-breakdown" class="sm-breakdown">&nbsp;</div>
     <div class="sm-denoms">
@@ -508,14 +509,18 @@ function renderGrid(){
       // Sub-line
       var sub=document.createElement('div');
       sub.className='sc-tile-sub';
-      if(!p.onBoard)sub.textContent='Needs 500 to board';
-      else if(finalRound&&leadingScore>0){
+      if(!p.onBoard){
+        var needBoard=500-p.score;
+        sub.textContent='Need '+Math.max(0,needBoard).toLocaleString()+' to board';
+        sub.style.color='rgba(255,180,0,0.8)';
+      } else if(finalRound&&leadingScore>0){
         var need=Math.ceil((leadingScore-p.score+50)/50)*50;
-        sub.textContent=need<=0?'\u2605 In the lead':'Need '+need.toLocaleString()+' to win';
-        sub.style.color=need<=0?'#5f5':'rgba(255,180,100,0.8)';
+        sub.textContent=need<=0?'★ IN THE LEAD':'Need '+need.toLocaleString()+' to win';
+        sub.style.color=need<=0?'#5f5':'rgba(255,150,80,0.9)';
       } else {
-        var pct=Math.round((p.score/WINNING)*100);
-        sub.textContent=pct+'% to target';
+        var toTarget=Math.max(0,WINNING-p.score);
+        sub.textContent=toTarget===0?'★ TARGET HIT':'Need '+toTarget.toLocaleString()+' more';
+        sub.style.color=toTarget===0?'#ffd700':'rgba(255,255,255,0.55)';
       }
 
       tile.appendChild(badge);
@@ -547,7 +552,7 @@ function openScoreModal(idx){
   var p=players[idx];
   document.getElementById('sm-name').textContent=p.name;
   document.getElementById('sm-prev').textContent=p.score>0?'Current score: '+p.score.toLocaleString():'No score yet';
-  smRefresh();
+  smRefresh(); // sets target line on open
   document.getElementById('score-modal').classList.add('show');
 }
 
