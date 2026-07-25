@@ -76,16 +76,19 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 .scorer-progress-fill{height:100%;border-radius:3px;transition:width 0.6s ease;background:linear-gradient(90deg,rgba(255,255,255,0.3),rgba(255,255,255,0.7));}
 #sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:250;flex-direction:column;align-items:center;justify-content:flex-start;padding:40px 24px;overflow-y:auto;}
 #sb-overlay.show{display:flex;}
-/* Clockwise player tiles */
-#scorer{position:relative;overflow:hidden;}
-.sc-tile{position:absolute;border-radius:12px;text-align:center;background:rgba(0,0,0,0.35);border:2px solid rgba(255,255,255,0.15);transition:all 0.35s;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 4px;box-sizing:border-box;}
-.sc-tile.active{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,0.3),0 0 28px rgba(255,255,255,0.2);background:rgba(255,255,255,0.15);z-index:2;}
-.sc-tile.first-round-active{cursor:grab;}
-.sc-tile-name{font-family:'Cinzel',serif;font-weight:700;letter-spacing:0.5px;color:rgba(255,255,255,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;}
+/* Scorer full-screen layout */
+#scorer{position:relative;overflow:hidden;background:#0a0a1a;}
+#sc-arena{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+#sc-play-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px 16px;position:relative;z-index:1;}
+/* Player tiles */
+.sc-tile{position:absolute;border-radius:14px;text-align:center;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.12);transition:all 0.3s;cursor:default;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 6px;box-sizing:border-box;}
+.sc-tile.active{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,0.25),0 0 24px rgba(255,255,255,0.15);background:rgba(255,255,255,0.12);}
+.sc-tile.swap-sel{border-color:#fa8;box-shadow:0 0 0 3px rgba(255,180,0,0.4);background:rgba(255,150,0,0.12);cursor:pointer;}
+.sc-tile.swappable{cursor:pointer;}
+.sc-tile-name{font-family:'Cinzel',serif;font-weight:700;color:rgba(255,255,255,0.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;}
 .sc-tile.active .sc-tile-name{color:#fff;}
 .sc-tile-score{font-family:'Cinzel',serif;font-weight:700;color:#fff;}
-.sc-tile-need{color:rgba(255,255,255,0.4);letter-spacing:0.5px;}
-.sc-tile.swap-highlight{border-color:#fa8;box-shadow:0 0 0 3px rgba(255,180,0,0.4);background:rgba(255,150,0,0.15);}
+.sc-tile-need{color:rgba(255,255,255,0.45);letter-spacing:0.5px;}
 @keyframes spin{0%{transform:rotate(0)scale(1)}50%{transform:rotate(360deg)scale(0.8)}100%{transform:rotate(720deg)scale(1)}}
 .spinning{animation:spin 0.5s ease;}
 @keyframes pop{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
@@ -257,35 +260,34 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 <div id="scorer" class="screen">
   <div id="scorer-bg" style="position:fixed;inset:0;z-index:0;transition:background 0.6s;"></div>
 
-  <!-- Clockwise player tiles (absolutely positioned) -->
-  <div id="sc-tiles"></div>
+  <!-- Full-screen arena with tiles + centre box -->
+  <div id="sc-arena">
+    <!-- Player tiles injected here by JS -->
+    <div id="sc-tiles"></div>
 
-  <!-- Centre content -->
-  <div id="scorer-content" style="position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-    <div style="pointer-events:all;text-align:center;width:100%;padding:0 20px;">
-      <div id="sc-round-lbl" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px;"></div>
-      <div id="sc-campaign-badge" style="display:none;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:#fa8;text-transform:uppercase;margin-bottom:6px;"></div>
+    <!-- Centre play box -->
+    <div id="sc-play-box">
+      <div id="sc-round-lbl" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px;"></div>
+      <div id="sc-campaign-badge" style="display:none;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:#fa8;text-transform:uppercase;margin-bottom:4px;"></div>
       <div id="sc-turn-label" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:4px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:8px;">Current Turn</div>
-      <div id="sc-name" style="font-family:'Cinzel',serif;font-size:42px;font-weight:900;color:#fff;letter-spacing:2px;text-shadow:0 4px 32px rgba(0,0,0,0.6);margin-bottom:6px;line-height:1.1;"></div>
-      <div id="sc-prev-score" style="font-family:'Crimson Text',serif;font-size:15px;color:rgba(255,255,255,0.4);margin-bottom:2px;"></div>
-      <div id="sc-total" style="font-family:'Cinzel',serif;font-size:64px;font-weight:700;color:#fff;text-shadow:0 0 60px rgba(255,255,255,0.25);line-height:1;margin-bottom:4px;"></div>
-      <div id="sc-target-lbl" style="font-family:'Crimson Text',serif;font-size:12px;color:rgba(255,255,255,0.25);"></div>
-      <div id="sc-onboard-warn" style="display:none;margin-top:10px;padding:6px 16px;background:rgba(255,180,0,0.15);border:1px solid rgba(255,180,0,0.3);border-radius:20px;color:#fa8;font-size:12px;display:inline-block;">First turn needs 500+ to get on the board</div>
-      <div id="sc-required" style="display:none;margin-top:8px;padding:8px 18px;border-radius:20px;font-size:13px;font-family:'Cinzel',serif;letter-spacing:1px;display:inline-block;"></div>
-      <div id="sc-hint" style="display:none;margin-top:8px;font-size:11px;color:rgba(255,255,255,0.3);font-family:'Crimson Text',serif;font-style:italic;">Tap a tile to select, tap another to swap order</div>
-    </div>
-  </div>
-
-  <!-- Bottom buttons (above centre content) -->
-  <div style="position:absolute;bottom:0;left:0;right:0;z-index:2;padding:0 24px 36px;display:flex;flex-direction:column;gap:12px;">
-    <div style="display:flex;gap:10px;margin-bottom:4px;">
-      <button onclick="quitScorer()" style="flex:1;padding:10px;border-radius:12px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);color:#aaa;font-size:13px;">Quit</button>
-      <div id="sc-progress-wrap" style="flex:3;display:flex;align-items:center;">
-        <div style="width:100%;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;"><div id="sc-progress" style="height:100%;border-radius:3px;transition:width 0.6s;background:linear-gradient(90deg,rgba(255,255,255,0.3),rgba(255,255,255,0.7));width:0%;"></div></div>
+      <div id="sc-name" style="font-family:'Cinzel',serif;font-size:40px;font-weight:900;color:#fff;letter-spacing:2px;text-shadow:0 4px 32px rgba(0,0,0,0.5);margin-bottom:6px;line-height:1.1;"></div>
+      <div id="sc-prev-score" style="font-family:'Crimson Text',serif;font-size:14px;color:rgba(255,255,255,0.4);margin-bottom:2px;"></div>
+      <div id="sc-total" style="font-family:'Cinzel',serif;font-size:60px;font-weight:700;color:#fff;text-shadow:0 0 40px rgba(255,255,255,0.2);line-height:1;margin-bottom:4px;"></div>
+      <div id="sc-target-lbl" style="font-family:'Crimson Text',serif;font-size:12px;color:rgba(255,255,255,0.25);margin-bottom:8px;"></div>
+      <!-- Progress bar inside box -->
+      <div style="width:100%;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-bottom:8px;">
+        <div id="sc-progress" style="height:100%;border-radius:3px;transition:width 0.6s;background:linear-gradient(90deg,rgba(255,255,255,0.3),rgba(255,255,255,0.8));width:0%;"></div>
+      </div>
+      <div id="sc-onboard-warn" style="display:none;padding:6px 14px;background:rgba(255,180,0,0.15);border:1px solid rgba(255,180,0,0.3);border-radius:16px;color:#fa8;font-size:11px;margin-bottom:6px;">First turn needs 500+ to get on the board</div>
+      <div id="sc-required" style="display:none;padding:6px 14px;border-radius:16px;font-size:12px;font-family:'Cinzel',serif;letter-spacing:1px;margin-bottom:6px;"></div>
+      <div id="sc-hint" style="display:none;font-size:10px;color:rgba(255,255,255,0.3);font-family:'Crimson Text',serif;font-style:italic;margin-top:4px;">Tap tiles to swap play order</div>
+      <!-- BANK / BUST inside box -->
+      <div style="width:100%;margin-top:14px;display:flex;flex-direction:column;gap:8px;">
+        <button onclick="scorerBankClick()" style="width:100%;padding:18px;border-radius:16px;background:linear-gradient(135deg,#1a6630,#2aaa44);border:none;color:#fff;font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:3px;box-shadow:0 6px 28px rgba(40,180,70,0.5);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">BANK</button>
+        <button onclick="scorerBust()" style="width:100%;padding:13px;border-radius:16px;background:linear-gradient(135deg,#6a1010,#bb2222);border:none;color:#fff;font-family:'Cinzel',serif;font-size:17px;font-weight:700;letter-spacing:3px;box-shadow:0 6px 28px rgba(180,40,40,0.4);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">BUST</button>
+        <button onclick="quitScorer()" style="width:100%;padding:8px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.3);font-size:12px;margin-top:2px;">Quit</button>
       </div>
     </div>
-    <button onclick="scorerBankClick()" style="width:100%;padding:22px;border-radius:20px;background:linear-gradient(135deg,#1a6630,#2aaa44);border:none;color:#fff;font-family:'Cinzel',serif;font-size:24px;font-weight:700;letter-spacing:3px;box-shadow:0 8px 40px rgba(40,180,70,0.5);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">BANK</button>
-    <button onclick="scorerBust()" style="width:100%;padding:16px;border-radius:20px;background:linear-gradient(135deg,#6a1010,#bb2222);border:none;color:#fff;font-family:'Cinzel',serif;font-size:19px;font-weight:700;letter-spacing:3px;box-shadow:0 8px 40px rgba(180,40,40,0.4);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">BUST</button>
   </div>
 </div>
 
@@ -700,55 +702,53 @@ function quitScorer(){
 
 function playerColor(idx){var c=PLAYER_COLORS[idx%PLAYER_COLORS.length];return 'linear-gradient(160deg,'+c[0]+' 0%,'+c[1]+' 100%)';}
 
-// ── Clockwise player tiles ───────────────────────────────────────────────────
+// ── Player tiles: corners (2-4) or perimeter (5+) ───────────────────────────
 var tileSwapSrc = null;
 
 function getTileSize(n){
-  // Returns {w,h,fs,ss,ns} based on player count
-  if(n<=3)  return {w:100,h:68,fs:12,ss:16,ns:9};
-  if(n<=5)  return {w:88,h:60,fs:11,ss:14,ns:8};
-  if(n<=8)  return {w:76,h:52,fs:10,ss:12,ns:7};
-  return          {w:64,h:46,fs:9, ss:11,ns:7};
+  if(n <= 4) return {w:110, h:72, fs:12, ss:17, ns:9};
+  if(n <= 6) return {w:96,  h:64, fs:11, ss:15, ns:8};
+  if(n <= 9) return {w:84,  h:56, fs:10, ss:13, ns:8};
+  return           {w:72,  h:50, fs:9,  ss:12, ns:7};
 }
 
 function getTilePositions(n, sw, sh, tw, th){
-  // Distribute n tiles clockwise around the screen edge, starting from top-left
-  // We place them along the perimeter: top, right, bottom (reversed), left (reversed)
-  // margin from edge
-  var m = 6;
+  var m = 10; // margin from screen edge
   var positions = [];
 
-  // Perimeter segments: top, right, bottom, left
-  // We'll compute evenly spaced points along the perimeter
-  var perim = 2*(sw + sh);
-  var spacing = perim / n;
-
-  for(var i=0;i<n;i++){
-    var dist = i * spacing;
-    var x, y;
-
-    if(dist < sw){
-      // Top edge (left to right)
-      x = m + dist;
-      y = m;
-    } else if(dist < sw + sh){
-      // Right edge (top to bottom)
-      x = sw - tw - m;
-      y = m + (dist - sw);
-    } else if(dist < 2*sw + sh){
-      // Bottom edge (right to left)
-      x = sw - m - tw - (dist - sw - sh);
-      y = sh - th - m;
-    } else {
-      // Left edge (bottom to top)
-      x = m;
-      y = sh - th - m - (dist - 2*sw - sh);
+  if(n <= 4){
+    // Fixed corners: TL, TR, BR, BL
+    var corners = [
+      {x: m,        y: m},
+      {x: sw-tw-m,  y: m},
+      {x: sw-tw-m,  y: sh-th-m},
+      {x: m,        y: sh-th-m}
+    ];
+    for(var i=0;i<n;i++) positions.push(corners[i]);
+  } else {
+    // Distribute evenly around perimeter, skipping the centre area
+    // Use 4 sides: top, right, bottom(reversed), left(reversed)
+    var totalSlots = n;
+    var perim = 2*(sw + sh);
+    for(var i=0;i<n;i++){
+      var dist = (i / n) * perim;
+      var x, y;
+      if(dist < sw){
+        x = m + (dist / sw) * (sw - 2*m - tw);
+        y = m;
+      } else if(dist < sw + sh){
+        x = sw - tw - m;
+        y = m + ((dist - sw) / sh) * (sh - 2*m - th);
+      } else if(dist < 2*sw + sh){
+        x = sw - tw - m - ((dist - sw - sh) / sw) * (sw - 2*m - tw);
+        y = sh - th - m;
+      } else {
+        x = m;
+        y = sh - th - m - ((dist - 2*sw - sh) / sh) * (sh - 2*m - th);
+      }
+      positions.push({x: Math.round(Math.max(m, Math.min(sw-tw-m, x))),
+                      y: Math.round(Math.max(m, Math.min(sh-th-m, y)))});
     }
-
-    // Clamp to screen
-    x = Math.max(m, Math.min(sw - tw - m, x));
-    y = Math.max(m, Math.min(sh - th - m, y));
-    positions.push({x:Math.round(x), y:Math.round(y)});
   }
   return positions;
 }
@@ -756,16 +756,21 @@ function getTilePositions(n, sw, sh, tw, th){
 function renderTiles(){
   var container = document.getElementById('sc-tiles');
   if(!container) return;
-  container.innerHTML = '';
+  // Remove old tiles but keep sc-tiles div
+  var old = container.querySelectorAll('.sc-tile');
+  old.forEach(function(t){t.remove();});
 
-  var n = players.length;
-  var ts = getTileSize(n);
-  var sw = window.innerWidth;
-  var sh = window.innerHeight;
+  var n   = players.length;
+  var ts  = getTileSize(n);
+  // Use scorer element dimensions
+  var arena = document.getElementById('sc-arena');
+  var sw = arena ? arena.offsetWidth  : window.innerWidth;
+  var sh = arena ? arena.offsetHeight : window.innerHeight;
+  if(sw===0) sw = window.innerWidth;
+  if(sh===0) sh = window.innerHeight;
+
   var positions = getTilePositions(n, sw, sh, ts.w, ts.h);
   var canSwap = firstRound && !finalRound;
-
-  // Show hint during first round
   var hint = document.getElementById('sc-hint');
   if(hint) hint.style.display = canSwap ? 'block' : 'none';
 
@@ -773,9 +778,13 @@ function renderTiles(){
     (function(idx){
       var pos = positions[idx];
       var isActive = idx === currentIdx;
+      var isSelected = tileSwapSrc === idx;
 
       var tile = document.createElement('div');
-      tile.className = 'sc-tile' + (isActive ? ' active' : '') + (canSwap ? ' first-round-active' : '');
+      tile.className = 'sc-tile'
+        + (isActive   ? ' active'   : '')
+        + (isSelected ? ' swap-sel' : '')
+        + (canSwap && !isActive ? ' swappable' : '');
       tile.style.left   = pos.x + 'px';
       tile.style.top    = pos.y + 'px';
       tile.style.width  = ts.w + 'px';
@@ -784,9 +793,7 @@ function renderTiles(){
       var nameEl = document.createElement('div');
       nameEl.className = 'sc-tile-name';
       nameEl.style.fontSize = ts.fs + 'px';
-      // Truncate long names
-      var name = p.name.length > 8 ? p.name.substring(0,7)+'…' : p.name;
-      nameEl.textContent = name;
+      nameEl.textContent = p.name.length > 9 ? p.name.substring(0,8)+'…' : p.name;
 
       var scoreEl = document.createElement('div');
       scoreEl.className = 'sc-tile-score';
@@ -798,7 +805,7 @@ function renderTiles(){
       needEl.style.fontSize = ts.ns + 'px';
       if(!p.onBoard){
         needEl.textContent = 'NEED 500';
-        needEl.style.color = 'rgba(255,180,0,0.6)';
+        needEl.style.color = 'rgba(255,180,0,0.7)';
       } else if(finalRound && leadingScore > 0){
         var need = Math.ceil((leadingScore - p.score + 50)/50)*50;
         needEl.textContent = need <= 0 ? '★ LEAD' : 'NEED '+need.toLocaleString();
@@ -809,29 +816,27 @@ function renderTiles(){
       tile.appendChild(scoreEl);
       if(needEl.textContent) tile.appendChild(needEl);
 
-      // Tap to swap order during first round
+      // Tap to swap during first round
       if(canSwap){
-        tile.addEventListener('click', function(){
+        function handleTap(e){
+          e.preventDefault();
           if(tileSwapSrc === null){
             tileSwapSrc = idx;
-            tile.classList.add('swap-highlight');
           } else if(tileSwapSrc === idx){
-            // Deselect
             tileSwapSrc = null;
-            tile.classList.remove('swap-highlight');
           } else {
-            // Swap players[tileSwapSrc] and players[idx]
+            // Swap
             var tmp = players[tileSwapSrc];
             players[tileSwapSrc] = players[idx];
             players[idx] = tmp;
-            // Keep currentIdx pointing at current player
-            if(tileSwapSrc === currentIdx) currentIdx = idx;
-            else if(idx === currentIdx) currentIdx = tileSwapSrc;
+            if(tileSwapSrc === currentIdx)      currentIdx = idx;
+            else if(idx === currentIdx)          currentIdx = tileSwapSrc;
             tileSwapSrc = null;
-            renderTiles();
           }
-        });
-        tile.addEventListener('touchend', function(e){ e.preventDefault(); tile.click(); }, {passive:false});
+          renderTiles();
+        }
+        tile.addEventListener('click', handleTap);
+        tile.addEventListener('touchend', handleTap, {passive:false});
       }
 
       container.appendChild(tile);
@@ -841,7 +846,9 @@ function renderTiles(){
 
 function renderScorerPlayer(){
   var p=players[currentIdx];
+  // Background colour per player
   document.getElementById('scorer-bg').style.background=playerColor(currentIdx);
+  // Centre box content
   document.getElementById('sc-name').textContent=p.name;
   document.getElementById('sc-name').className='slideup';
   document.getElementById('sc-total').textContent=p.score.toLocaleString();
@@ -860,9 +867,19 @@ function renderScorerPlayer(){
   var reqEl=document.getElementById('sc-required');
   if(finalRound&&reqEl){
     var needed=leadingScore-p.score+50;needed=Math.ceil(needed/50)*50;
-    if(needed<=0){reqEl.textContent='You are in the lead!';reqEl.style.cssText='display:block;margin-top:12px;padding:10px 22px;border-radius:20px;font-size:14px;font-family:Cinzel,serif;letter-spacing:1px;background:rgba(50,200,50,0.15);border:1px solid rgba(80,220,80,0.3);color:#5f5;';}
-    else{reqEl.textContent='You need '+needed.toLocaleString()+' pts to win';reqEl.style.cssText='display:block;margin-top:12px;padding:10px 22px;border-radius:20px;font-size:14px;font-family:Cinzel,serif;letter-spacing:1px;background:rgba(255,50,50,0.12);border:1px solid rgba(255,80,80,0.3);color:#faa;';}
+    if(needed<=0){reqEl.textContent='You are in the lead!';reqEl.style.cssText='display:inline-block;padding:6px 14px;border-radius:16px;font-size:12px;font-family:Cinzel,serif;letter-spacing:1px;background:rgba(50,200,50,0.15);border:1px solid rgba(80,220,80,0.3);color:#5f5;';}
+    else{reqEl.textContent='Need '+needed.toLocaleString()+' to win';reqEl.style.cssText='display:inline-block;padding:6px 14px;border-radius:16px;font-size:12px;font-family:Cinzel,serif;letter-spacing:1px;background:rgba(255,50,50,0.12);border:1px solid rgba(255,80,80,0.3);color:#faa;';}
   } else if(reqEl) reqEl.style.display='none';
+  // Size the centre play box: leave room for tiles on all sides
+  var n=players.length;
+  var ts=getTileSize(n);
+  var sw=window.innerWidth, sh=window.innerHeight;
+  var margin=ts.w+24; // horizontal clearance
+  var vmargin=ts.h+24; // vertical clearance
+  var boxW=Math.min(sw-2*margin, 340);
+  var boxH=sh-2*vmargin;
+  var box=document.getElementById('sc-play-box');
+  if(box){box.style.width=boxW+'px';box.style.maxHeight=boxH+'px';box.style.overflowY='auto';}
   renderTiles();
 }
 
