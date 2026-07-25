@@ -76,6 +76,16 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 .scorer-progress-fill{height:100%;border-radius:3px;transition:width 0.6s ease;background:linear-gradient(90deg,rgba(255,255,255,0.3),rgba(255,255,255,0.7));}
 #sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:250;flex-direction:column;align-items:center;justify-content:flex-start;padding:40px 24px;overflow-y:auto;}
 #sb-overlay.show{display:flex;}
+/* Clockwise player tiles */
+#scorer{position:relative;overflow:hidden;}
+.sc-tile{position:absolute;border-radius:12px;text-align:center;background:rgba(0,0,0,0.35);border:2px solid rgba(255,255,255,0.15);transition:all 0.35s;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 4px;box-sizing:border-box;}
+.sc-tile.active{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,0.3),0 0 28px rgba(255,255,255,0.2);background:rgba(255,255,255,0.15);z-index:2;}
+.sc-tile.first-round-active{cursor:grab;}
+.sc-tile-name{font-family:'Cinzel',serif;font-weight:700;letter-spacing:0.5px;color:rgba(255,255,255,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;}
+.sc-tile.active .sc-tile-name{color:#fff;}
+.sc-tile-score{font-family:'Cinzel',serif;font-weight:700;color:#fff;}
+.sc-tile-need{color:rgba(255,255,255,0.4);letter-spacing:0.5px;}
+.sc-tile.swap-highlight{border-color:#fa8;box-shadow:0 0 0 3px rgba(255,180,0,0.4);background:rgba(255,150,0,0.15);}
 @keyframes spin{0%{transform:rotate(0)scale(1)}50%{transform:rotate(360deg)scale(0.8)}100%{transform:rotate(720deg)scale(1)}}
 .spinning{animation:spin 0.5s ease;}
 @keyframes pop{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
@@ -246,30 +256,36 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 <!-- SCORE-ONLY / CAMPAIGN SCORER -->
 <div id="scorer" class="screen">
   <div id="scorer-bg" style="position:fixed;inset:0;z-index:0;transition:background 0.6s;"></div>
-  <div id="scorer-content">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:rgba(0,0,0,0.3);backdrop-filter:blur(8px);gap:8px;">
-      <button onclick="quitScorer()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:6px 12px;font-size:13px;flex-shrink:0;">Quit</button>
-      <div id="sc-round-lbl" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.5);text-align:center;flex:1;"></div>
-      <div style="display:flex;gap:8px;flex-shrink:0;">
-        <button id="sc-order-btn" onclick="openOrderMidGame()" style="display:none;background:rgba(255,180,0,0.15);border:1px solid rgba(255,180,0,0.3);border-radius:8px;color:#fa8;padding:6px 10px;font-size:12px;font-family:'Cinzel',serif;letter-spacing:1px;">&#8644; Order</button>
-        <button onclick="showSbOverlay()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:6px 12px;font-size:13px;">&#9776;</button>
+
+  <!-- Clockwise player tiles (absolutely positioned) -->
+  <div id="sc-tiles"></div>
+
+  <!-- Centre content -->
+  <div id="scorer-content" style="position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+    <div style="pointer-events:all;text-align:center;width:100%;padding:0 20px;">
+      <div id="sc-round-lbl" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px;"></div>
+      <div id="sc-campaign-badge" style="display:none;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:#fa8;text-transform:uppercase;margin-bottom:6px;"></div>
+      <div id="sc-turn-label" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:4px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:8px;">Current Turn</div>
+      <div id="sc-name" style="font-family:'Cinzel',serif;font-size:42px;font-weight:900;color:#fff;letter-spacing:2px;text-shadow:0 4px 32px rgba(0,0,0,0.6);margin-bottom:6px;line-height:1.1;"></div>
+      <div id="sc-prev-score" style="font-family:'Crimson Text',serif;font-size:15px;color:rgba(255,255,255,0.4);margin-bottom:2px;"></div>
+      <div id="sc-total" style="font-family:'Cinzel',serif;font-size:64px;font-weight:700;color:#fff;text-shadow:0 0 60px rgba(255,255,255,0.25);line-height:1;margin-bottom:4px;"></div>
+      <div id="sc-target-lbl" style="font-family:'Crimson Text',serif;font-size:12px;color:rgba(255,255,255,0.25);"></div>
+      <div id="sc-onboard-warn" style="display:none;margin-top:10px;padding:6px 16px;background:rgba(255,180,0,0.15);border:1px solid rgba(255,180,0,0.3);border-radius:20px;color:#fa8;font-size:12px;display:inline-block;">First turn needs 500+ to get on the board</div>
+      <div id="sc-required" style="display:none;margin-top:8px;padding:8px 18px;border-radius:20px;font-size:13px;font-family:'Cinzel',serif;letter-spacing:1px;display:inline-block;"></div>
+      <div id="sc-hint" style="display:none;margin-top:8px;font-size:11px;color:rgba(255,255,255,0.3);font-family:'Crimson Text',serif;font-style:italic;">Tap a tile to select, tap another to swap order</div>
+    </div>
+  </div>
+
+  <!-- Bottom buttons (above centre content) -->
+  <div style="position:absolute;bottom:0;left:0;right:0;z-index:2;padding:0 24px 36px;display:flex;flex-direction:column;gap:12px;">
+    <div style="display:flex;gap:10px;margin-bottom:4px;">
+      <button onclick="quitScorer()" style="flex:1;padding:10px;border-radius:12px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);color:#aaa;font-size:13px;">Quit</button>
+      <div id="sc-progress-wrap" style="flex:3;display:flex;align-items:center;">
+        <div style="width:100%;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;"><div id="sc-progress" style="height:100%;border-radius:3px;transition:width 0.6s;background:linear-gradient(90deg,rgba(255,255,255,0.3),rgba(255,255,255,0.7));width:0%;"></div></div>
       </div>
     </div>
-    <div class="scorer-progress" style="margin:0 24px;"><div id="sc-progress" class="scorer-progress-fill" style="width:0%;"></div></div>
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 24px;text-align:center;min-height:55vh;">
-      <div id="sc-campaign-badge" style="display:none;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:#fa8;text-transform:uppercase;margin-bottom:8px;"></div>
-      <div id="sc-turn-label" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:14px;">Current Turn</div>
-      <div id="sc-name" style="font-family:'Cinzel',serif;font-size:52px;font-weight:900;color:#fff;letter-spacing:2px;text-shadow:0 4px 32px rgba(0,0,0,0.5);margin-bottom:24px;line-height:1.1;"></div>
-      <div id="sc-prev-score" style="font-family:'Crimson Text',serif;font-size:17px;color:rgba(255,255,255,0.45);margin-bottom:4px;"></div>
-      <div id="sc-total" style="font-family:'Cinzel',serif;font-size:76px;font-weight:700;color:#fff;text-shadow:0 0 60px rgba(255,255,255,0.2);line-height:1;"></div>
-      <div id="sc-target-lbl" style="font-family:'Crimson Text',serif;font-size:14px;color:rgba(255,255,255,0.3);margin-top:8px;"></div>
-      <div id="sc-onboard-warn" style="display:none;margin-top:16px;padding:10px 20px;background:rgba(255,180,0,0.15);border:1px solid rgba(255,180,0,0.3);border-radius:20px;color:#fa8;font-size:13px;">First turn needs 500+ to get on the board</div>
-      <div id="sc-required" style="display:none;margin-top:14px;padding:12px 24px;border-radius:20px;font-size:15px;font-family:'Cinzel',serif;letter-spacing:1px;"></div>
-    </div>
-    <div style="padding:0 24px 36px;display:flex;flex-direction:column;gap:14px;">
-      <button onclick="scorerBankClick()" style="width:100%;padding:26px;border-radius:20px;background:linear-gradient(135deg,#1a6630,#2aaa44);border:none;color:#fff;font-family:'Cinzel',serif;font-size:26px;font-weight:700;letter-spacing:3px;box-shadow:0 8px 40px rgba(40,180,70,0.5);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">BANK</button>
-      <button onclick="scorerBust()" style="width:100%;padding:20px;border-radius:20px;background:linear-gradient(135deg,#6a1010,#bb2222);border:none;color:#fff;font-family:'Cinzel',serif;font-size:20px;font-weight:700;letter-spacing:3px;box-shadow:0 8px 40px rgba(180,40,40,0.4);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">BUST</button>
-    </div>
+    <button onclick="scorerBankClick()" style="width:100%;padding:22px;border-radius:20px;background:linear-gradient(135deg,#1a6630,#2aaa44);border:none;color:#fff;font-family:'Cinzel',serif;font-size:24px;font-weight:700;letter-spacing:3px;box-shadow:0 8px 40px rgba(40,180,70,0.5);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">BANK</button>
+    <button onclick="scorerBust()" style="width:100%;padding:16px;border-radius:20px;background:linear-gradient(135deg,#6a1010,#bb2222);border:none;color:#fff;font-family:'Cinzel',serif;font-size:19px;font-weight:700;letter-spacing:3px;box-shadow:0 8px 40px rgba(180,40,40,0.4);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">BUST</button>
   </div>
 </div>
 
@@ -285,17 +301,7 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   </div>
 </div>
 
-<!-- SCOREBOARD OVERLAY -->
-<div id="sb-overlay">
-  <div style="width:100%;max-width:480px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
-      <h2 style="font-family:'Cinzel',serif;font-size:22px;letter-spacing:3px;color:#fff;">SCOREBOARD</h2>
-      <button onclick="hideSbOverlay()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#aaa;padding:8px 16px;font-size:14px;">Close</button>
-    </div>
-    <div id="sb-list"></div>
-    <button onclick="hideSbOverlay()" class="btn btn-blue" style="width:100%;margin-top:28px;font-size:16px;letter-spacing:2px;">Back to Game</button>
-  </div>
-</div>
+
 
 <!-- TALLY MODAL -->
 <div id="dial-modal">
@@ -642,10 +648,17 @@ function updateNgStartBtn(){
 function startNextGame(){
   if(!campaign)return;
   WINNING=campaign.target;
-  // Build players in ngOrder, active only
+  // Pick a random active player as first, rotate ngOrder so they are at top
+  var activeIndices=ngOrder.filter(function(i){return campaign.players[i].active!==false;});
+  var randomFirst=activeIndices[Math.floor(Math.random()*activeIndices.length)];
+  var splitPos=ngOrder.indexOf(randomFirst);
+  ngOrder=ngOrder.slice(splitPos).concat(ngOrder.slice(0,splitPos));
+  // Re-render so the screen reflects new order before game starts
+  renderNgList();
+  // Build players in new order, active only
   var activePlayers=ngOrder.filter(function(i){return campaign.players[i].active!==false;}).map(function(i){return{name:campaign.players[i].name,score:0,onBoard:false,campaignRef:campaign.players[i]};});
   players=activePlayers;
-  currentIdx=0; // first in ngOrder is already set as first player
+  currentIdx=0;
   finalRound=false;finalRoundQueue=[];triggerIdx=null;leadingScore=0;
   firstRound=true;firstRoundStart=0;
   startScorer();
@@ -678,25 +691,161 @@ function showCampaignBoard(){
 }
 
 // ── SCORER ────────────────────────────────────────────────────────────────────
-function startScorer(){showScreen('scorer');updateOrderBtn();renderScorerPlayer();setTimeout(function(){showToast('\uD83C\uDFB2 '+players[0].name+' goes first!');},400);}
+function startScorer(){showScreen('scorer');renderScorerPlayer();setTimeout(function(){showToast('\uD83C\uDFB2 '+players[0].name+' goes first!');},400);}
 
 function quitScorer(){
   if(gameMode==='campaign'){showNextGameScreen();}
   else{showScreen('mode-select');}
 }
 
-function updateOrderBtn(){
-  var btn=document.getElementById('sc-order-btn');
-  if(btn)btn.style.display=(firstRound&&!finalRound)?'block':'none';
+function playerColor(idx){var c=PLAYER_COLORS[idx%PLAYER_COLORS.length];return 'linear-gradient(160deg,'+c[0]+' 0%,'+c[1]+' 100%)';}
+
+// ── Clockwise player tiles ───────────────────────────────────────────────────
+var tileSwapSrc = null;
+
+function getTileSize(n){
+  // Returns {w,h,fs,ss,ns} based on player count
+  if(n<=3)  return {w:100,h:68,fs:12,ss:16,ns:9};
+  if(n<=5)  return {w:88,h:60,fs:11,ss:14,ns:8};
+  if(n<=8)  return {w:76,h:52,fs:10,ss:12,ns:7};
+  return          {w:64,h:46,fs:9, ss:11,ns:7};
 }
 
-function playerColor(idx){var c=PLAYER_COLORS[idx%PLAYER_COLORS.length];return 'linear-gradient(160deg,'+c[0]+' 0%,'+c[1]+' 100%)';}
+function getTilePositions(n, sw, sh, tw, th){
+  // Distribute n tiles clockwise around the screen edge, starting from top-left
+  // We place them along the perimeter: top, right, bottom (reversed), left (reversed)
+  // margin from edge
+  var m = 6;
+  var positions = [];
+
+  // Perimeter segments: top, right, bottom, left
+  // We'll compute evenly spaced points along the perimeter
+  var perim = 2*(sw + sh);
+  var spacing = perim / n;
+
+  for(var i=0;i<n;i++){
+    var dist = i * spacing;
+    var x, y;
+
+    if(dist < sw){
+      // Top edge (left to right)
+      x = m + dist;
+      y = m;
+    } else if(dist < sw + sh){
+      // Right edge (top to bottom)
+      x = sw - tw - m;
+      y = m + (dist - sw);
+    } else if(dist < 2*sw + sh){
+      // Bottom edge (right to left)
+      x = sw - m - tw - (dist - sw - sh);
+      y = sh - th - m;
+    } else {
+      // Left edge (bottom to top)
+      x = m;
+      y = sh - th - m - (dist - 2*sw - sh);
+    }
+
+    // Clamp to screen
+    x = Math.max(m, Math.min(sw - tw - m, x));
+    y = Math.max(m, Math.min(sh - th - m, y));
+    positions.push({x:Math.round(x), y:Math.round(y)});
+  }
+  return positions;
+}
+
+function renderTiles(){
+  var container = document.getElementById('sc-tiles');
+  if(!container) return;
+  container.innerHTML = '';
+
+  var n = players.length;
+  var ts = getTileSize(n);
+  var sw = window.innerWidth;
+  var sh = window.innerHeight;
+  var positions = getTilePositions(n, sw, sh, ts.w, ts.h);
+  var canSwap = firstRound && !finalRound;
+
+  // Show hint during first round
+  var hint = document.getElementById('sc-hint');
+  if(hint) hint.style.display = canSwap ? 'block' : 'none';
+
+  players.forEach(function(p, i){
+    (function(idx){
+      var pos = positions[idx];
+      var isActive = idx === currentIdx;
+
+      var tile = document.createElement('div');
+      tile.className = 'sc-tile' + (isActive ? ' active' : '') + (canSwap ? ' first-round-active' : '');
+      tile.style.left   = pos.x + 'px';
+      tile.style.top    = pos.y + 'px';
+      tile.style.width  = ts.w + 'px';
+      tile.style.height = ts.h + 'px';
+
+      var nameEl = document.createElement('div');
+      nameEl.className = 'sc-tile-name';
+      nameEl.style.fontSize = ts.fs + 'px';
+      // Truncate long names
+      var name = p.name.length > 8 ? p.name.substring(0,7)+'…' : p.name;
+      nameEl.textContent = name;
+
+      var scoreEl = document.createElement('div');
+      scoreEl.className = 'sc-tile-score';
+      scoreEl.style.fontSize = ts.ss + 'px';
+      scoreEl.textContent = p.score.toLocaleString();
+
+      var needEl = document.createElement('div');
+      needEl.className = 'sc-tile-need';
+      needEl.style.fontSize = ts.ns + 'px';
+      if(!p.onBoard){
+        needEl.textContent = 'NEED 500';
+        needEl.style.color = 'rgba(255,180,0,0.6)';
+      } else if(finalRound && leadingScore > 0){
+        var need = Math.ceil((leadingScore - p.score + 50)/50)*50;
+        needEl.textContent = need <= 0 ? '★ LEAD' : 'NEED '+need.toLocaleString();
+        needEl.style.color = need <= 0 ? '#5f5' : 'rgba(255,150,100,0.8)';
+      }
+
+      tile.appendChild(nameEl);
+      tile.appendChild(scoreEl);
+      if(needEl.textContent) tile.appendChild(needEl);
+
+      // Tap to swap order during first round
+      if(canSwap){
+        tile.addEventListener('click', function(){
+          if(tileSwapSrc === null){
+            tileSwapSrc = idx;
+            tile.classList.add('swap-highlight');
+          } else if(tileSwapSrc === idx){
+            // Deselect
+            tileSwapSrc = null;
+            tile.classList.remove('swap-highlight');
+          } else {
+            // Swap players[tileSwapSrc] and players[idx]
+            var tmp = players[tileSwapSrc];
+            players[tileSwapSrc] = players[idx];
+            players[idx] = tmp;
+            // Keep currentIdx pointing at current player
+            if(tileSwapSrc === currentIdx) currentIdx = idx;
+            else if(idx === currentIdx) currentIdx = tileSwapSrc;
+            tileSwapSrc = null;
+            renderTiles();
+          }
+        });
+        tile.addEventListener('touchend', function(e){ e.preventDefault(); tile.click(); }, {passive:false});
+      }
+
+      container.appendChild(tile);
+    })(i);
+  });
+}
 
 function renderScorerPlayer(){
   var p=players[currentIdx];
   document.getElementById('scorer-bg').style.background=playerColor(currentIdx);
-  document.getElementById('sc-name').textContent=p.name;document.getElementById('sc-name').className='slideup';
-  document.getElementById('sc-total').textContent=p.score.toLocaleString();document.getElementById('sc-total').className='pop';
+  document.getElementById('sc-name').textContent=p.name;
+  document.getElementById('sc-name').className='slideup';
+  document.getElementById('sc-total').textContent=p.score.toLocaleString();
+  document.getElementById('sc-total').className='pop';
   document.getElementById('sc-prev-score').textContent=p.score>0?'Previous: '+p.score.toLocaleString():'No score yet';
   document.getElementById('sc-target-lbl').textContent='Target: '+WINNING.toLocaleString();
   document.getElementById('sc-onboard-warn').style.display=!p.onBoard?'block':'none';
@@ -706,15 +855,15 @@ function renderScorerPlayer(){
   document.getElementById('sc-turn-label').textContent=finalRound?'FINAL ROUND':'Current Turn';
   var cb=document.getElementById('sc-campaign-badge');
   if(gameMode==='campaign'&&campaign){cb.style.display='block';cb.textContent='Campaign \u2022 Game '+campaign.gameNum;}
-  else{cb.style.display='none';}
+  else cb.style.display='none';
   // Required score banner
   var reqEl=document.getElementById('sc-required');
   if(finalRound&&reqEl){
     var needed=leadingScore-p.score+50;needed=Math.ceil(needed/50)*50;
-    if(needed<=0){reqEl.textContent='You are in the lead!';reqEl.style.cssText='display:block;margin-top:14px;padding:12px 24px;border-radius:20px;font-size:15px;font-family:Cinzel,serif;letter-spacing:1px;background:rgba(50,200,50,0.15);border:1px solid rgba(80,220,80,0.3);color:#5f5;';}
-    else{reqEl.textContent='You need '+needed.toLocaleString()+' pts to win';reqEl.style.cssText='display:block;margin-top:14px;padding:12px 24px;border-radius:20px;font-size:15px;font-family:Cinzel,serif;letter-spacing:1px;background:rgba(255,50,50,0.12);border:1px solid rgba(255,80,80,0.3);color:#faa;';}
-  } else if(reqEl){reqEl.style.display='none';}
-  updateOrderBtn();
+    if(needed<=0){reqEl.textContent='You are in the lead!';reqEl.style.cssText='display:block;margin-top:12px;padding:10px 22px;border-radius:20px;font-size:14px;font-family:Cinzel,serif;letter-spacing:1px;background:rgba(50,200,50,0.15);border:1px solid rgba(80,220,80,0.3);color:#5f5;';}
+    else{reqEl.textContent='You need '+needed.toLocaleString()+' pts to win';reqEl.style.cssText='display:block;margin-top:12px;padding:10px 22px;border-radius:20px;font-size:14px;font-family:Cinzel,serif;letter-spacing:1px;background:rgba(255,50,50,0.12);border:1px solid rgba(255,80,80,0.3);color:#faa;';}
+  } else if(reqEl) reqEl.style.display='none';
+  renderTiles();
 }
 
 function scorerBankClick(){tallyCounts={1000:0,500:0,100:0,50:0};tallyRefresh();document.getElementById('tally-player-name').textContent=players[currentIdx].name;document.getElementById('dial-modal').classList.add('show');}
@@ -763,14 +912,7 @@ function scorerAdvance(bust,earned,isBust){
   currentIdx=nextIdx;renderScorerPlayer();
 }
 
-function showSbOverlay(){
-  var sorted=players.slice().sort(function(a,b){return b.score-a.score;});
-  var list=document.getElementById('sb-list');list.innerHTML='';
-  sorted.forEach(function(p,i){var row=document.createElement('div'),isLead=i===0;row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:16px 20px;margin-bottom:10px;border-radius:14px;background:'+(isLead?'rgba(255,215,0,0.1)':'rgba(255,255,255,0.04)')+';border:1px solid '+(isLead?'rgba(255,215,0,0.3)':'rgba(255,255,255,0.07)')+';';var nb=!p.onBoard?'<div style="font-size:11px;color:#888;margin-top:2px;">needs 500 to board</div>':'';row.innerHTML='<div style="display:flex;align-items:center;gap:14px;"><div style="font-family:Cinzel,serif;font-size:18px;color:'+(isLead?'#ffd700':'#666')+';width:24px;">'+(i+1)+'</div><div><div style="font-size:17px;color:'+(isLead?'#ffd700':'#ddd')+';font-weight:'+(isLead?700:400)+';">'+p.name+'</div>'+nb+'</div></div><div style="font-family:monospace;font-size:22px;font-weight:700;color:'+(isLead?'#ffd700':'#fff')+';">'+p.score.toLocaleString()+'</div>';list.appendChild(row);});
-  var tgt=document.createElement('div');tgt.style.cssText='text-align:center;font-size:12px;color:#555;margin-top:8px;font-family:Cinzel,serif;letter-spacing:2px;';tgt.textContent='TARGET: '+WINNING.toLocaleString();list.appendChild(tgt);
-  document.getElementById('sb-overlay').classList.add('show');
-}
-function hideSbOverlay(){document.getElementById('sb-overlay').classList.remove('show');}
+// scoreboard overlay replaced by player tiles
 
 // ── END GAME ──────────────────────────────────────────────────────────────────
 function endGame(){
