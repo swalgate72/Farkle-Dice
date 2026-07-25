@@ -672,9 +672,21 @@ function renderGrid(){
         sub.style.color=toTarget===0?'#ffd700':'rgba(255,255,255,0.55)';
       }
 
+      // Position (1st, 2nd, 3rd...) based on score rank
+      var sorted=players.slice().sort(function(a,b){return b.score-a.score;});
+      var rank=sorted.indexOf(p)+1;
+      var suffix=rank===1?'st':rank===2?'nd':rank===3?'rd':'th';
+      var posEl=document.createElement('div');
+      posEl.style.cssText='font-family:Cinzel,serif;font-weight:700;color:rgba(255,255,255,0.55);text-align:center;position:relative;z-index:1;margin-top:4px;letter-spacing:1px;line-height:1;';
+      posEl.style.fontSize=Math.round(fs*0.75)+'px';
+      posEl.textContent=rank+suffix;
+      // Gold for 1st if scores differ
+      if(rank===1&&players.length>1&&sorted[0].score>sorted[1].score)posEl.style.color='#ffd700';
+
       tile.appendChild(badge);
       tile.appendChild(nameEl);
       tile.appendChild(scoreEl);
+      tile.appendChild(posEl);
       tile.appendChild(sub);
 
       // Tap to open score modal for current player
