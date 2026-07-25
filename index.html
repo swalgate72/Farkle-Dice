@@ -31,6 +31,14 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 .drag-handle{cursor:grab;color:#555;font-size:18px;padding:0 8px;user-select:none;flex-shrink:0;}
 .player-row{display:flex;gap:10px;margin-bottom:10px;align-items:center;border-radius:12px;transition:background 0.15s;padding:2px;}
 .player-row.drag-over{background:rgba(68,170,255,0.08);outline:1px dashed rgba(68,170,255,0.3);}
+/* Order phase */
+#order-banner{background:rgba(68,136,255,0.15);border-bottom:1px solid rgba(68,136,255,0.3);padding:10px 16px;text-align:center;font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;color:#7df;flex-shrink:0;}
+#order-confirm-bar{padding:12px 16px;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);flex-shrink:0;}
+.sc-tile.ordering{cursor:grab;filter:brightness(0.8);}
+.sc-tile.ordering:active{cursor:grabbing;}
+.sc-tile.drag-ghost{opacity:0.35;transform:scale(0.96);}
+.sc-tile.drop-target-left{box-shadow:-6px 0 0 0 #4af;}
+.sc-tile.drop-target-right{box-shadow:6px 0 0 0 #4af;}
 /* SCORER GRID */
 #sc-grid{display:grid;width:100%;flex:1;min-height:0;}
 .sc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 8px;border:2px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;filter:brightness(0.55);}
@@ -195,8 +203,14 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
     <div id="sc-round-lbl" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.5);text-align:center;"></div>
     <div style="width:60px;"></div>
   </div>
+  <!-- Order phase banner (shown before game starts) -->
+  <div id="order-banner" style="display:none;">&#9651; DRAG TILES TO SET ORDER OF PLAY &#9661;</div>
   <!-- Player grid fills remaining space -->
   <div id="sc-grid" style="flex:1;display:grid;min-height:0;"></div>
+  <!-- Order confirm bar (shown before game starts) -->
+  <div id="order-confirm-bar" style="display:none;">
+    <button onclick="confirmTileOrder()" style="width:100%;padding:18px;border-radius:16px;background:linear-gradient(135deg,#2255cc,#4488ff);border:none;color:#fff;font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:3px;box-shadow:0 6px 28px rgba(68,136,255,0.5);">CONFIRM &amp; START GAME</button>
+  </div>
 </div>
 
 <!-- GAME OVER -->
@@ -411,9 +425,27 @@ function startGame(){
 
 // ── SCORER ────────────────────────────────────────────────────────────────────
 function startScorer(){
+  // Build initial player order
+  playerOrder=players.map(function(_,i){return i;});
+  orderingPhase=true;
   showScreen('scorer');
+  document.getElementById('sc-round-lbl').textContent='';
+  document.getElementById('order-banner').style.display='block';
+  document.getElementById('order-confirm-bar').style.display='block';
+  renderOrderGrid();
+}
+
+function confirmTileOrder(){
+  // Reorder players array to match playerOrder, reset currentIdx to random start
+  var reordered=playerOrder.map(function(i){return players[i];});
+  players=reordered;
+  currentIdx=Math.floor(Math.random()*players.length);
+  firstRoundStart=currentIdx;
+  orderingPhase=false;
+  document.getElementById('order-banner').style.display='none';
+  document.getElementById('order-confirm-bar').style.display='none';
   renderGrid();
-  setTimeout(function(){showToast('\uD83C\uDFB2 '+players[currentIdx].name+' goes first!');},400);
+  setTimeout(function(){showToast('\uD83C\uDFB2 '+players[currentIdx].name+' goes first!');},300);
 }
 
 // Build clockwise order for the grid
@@ -433,6 +465,91 @@ function gridLayout(n){
   return {cols:cols,rows:rows};
 }
 
+// ── Order phase grid (touch drag to reorder) ────────────────────────────────
+var orderingPhase=false;
+var playerOrder=[];
+var dragSrcPos=null;   // position index being dragged in playerOrder
+var dragEl=null;       // the DOM element being dragged (clone)
+var dragOriginEl=null; // the original tile
+
+function renderOrderGrid(){
+  var grid=document.getElementById('sc-grid');
+  grid.innerHTML='';
+  var n=playerOrder.length;
+  var rows=Math.ceil(n/2);
+  var cols=n<=1?1:2;
+  grid.style.gridTemplateColumns='repeat('+cols+',1fr)';
+  grid.style.gridTemplateRows='repeat('+rows+',1fr)';
+  var cwPos=clockwiseGridPositions(n);
+
+  playerOrder.forEach(function(pIdx,pos){
+    (function(position,playerIndex){
+      var p=players[playerIndex];
+      var gRow=cwPos[position][0];
+      var gCol=cwPos[position][1];
+
+      var tile=document.createElement('div');
+      tile.className='sc-tile ordering';
+      tile.style.background=TILE_COLORS[playerIndex%TILE_COLORS.length];
+      tile.style.gridRow=(gRow+1)+'';
+      tile.style.gridColumn=(gCol+1)+'';
+      tile.style.filter='brightness(0.85)';
+      tile.dataset.pos=position;
+
+      var numBadge=document.createElement('div');
+      numBadge.style.cssText='position:absolute;top:8px;left:10px;font-family:Cinzel,serif;font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:1px;z-index:1;';
+      numBadge.textContent='#'+(position+1);
+
+      var nameEl=document.createElement('div');
+      nameEl.className='sc-tile-name';
+      var tileW=window.innerWidth/cols;
+      nameEl.style.fontSize=nameFontSize(p.name,tileW,28,13)+'px';
+      nameEl.textContent=p.name;
+
+      var hint=document.createElement('div');
+      hint.style.cssText='font-family:Crimson Text,serif;font-size:11px;color:rgba(255,255,255,0.35);text-align:center;position:relative;z-index:1;margin-top:6px;font-style:italic;';
+      hint.textContent='hold & drag';
+
+      tile.appendChild(numBadge);
+      tile.appendChild(nameEl);
+      tile.appendChild(hint);
+
+      // Touch drag
+      tile.addEventListener('touchstart',function(e){
+        e.preventDefault();
+        dragSrcPos=position;
+        tile.style.opacity='0.4';
+        tile.style.transform='scale(0.95)';
+      },{passive:false});
+
+      tile.addEventListener('touchend',function(e){
+        e.preventDefault();
+        tile.style.opacity='1';
+        tile.style.transform='';
+        // Find which tile we're over
+        var t=e.changedTouches[0];
+        var el=document.elementFromPoint(t.clientX,t.clientY);
+        while(el&&!el.dataset.pos&&el!==grid)el=el.parentElement;
+        if(el&&el.dataset.pos!==undefined){
+          var dropPos=parseInt(el.dataset.pos);
+          if(dropPos!==dragSrcPos){
+            // Move dragSrcPos to dropPos
+            var moved=playerOrder.splice(dragSrcPos,1)[0];
+            playerOrder.splice(dropPos,0,moved);
+            renderOrderGrid();
+            return;
+          }
+        }
+        dragSrcPos=null;
+        renderOrderGrid();
+      },{passive:false});
+
+      grid.appendChild(tile);
+    })(pos,pIdx);
+  });
+}
+
+// ── Live game grid ────────────────────────────────────────────────────────────
 // Returns array of {row,col} positions in clockwise order for player indices 0..n-1
 // Clockwise: top-left → top-right → down right side → bottom-left → up left side
 function clockwiseGridPositions(n){
