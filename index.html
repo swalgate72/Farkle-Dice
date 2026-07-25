@@ -33,10 +33,10 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 .player-row.drag-over{background:rgba(68,170,255,0.08);outline:1px dashed rgba(68,170,255,0.3);}
 /* SCORER GRID */
 #sc-grid{display:grid;width:100%;height:100%;flex:1;}
-.sc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 8px;border:2px solid rgba(255,255,255,0.08);cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;}
-.sc-tile::before{content:'';position:absolute;inset:0;background:inherit;opacity:0.18;}
-.sc-tile.current{border-color:#fff;border-width:3px;box-shadow:inset 0 0 0 3px rgba(255,255,255,0.35),0 0 40px rgba(255,255,255,0.3),0 0 80px rgba(255,255,255,0.1);}
-.sc-tile.next-up{border-color:rgba(255,255,255,0.3);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.1);}
+.sc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 8px;border:2px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;filter:brightness(0.55);}
+.sc-tile::before{content:'';position:absolute;inset:0;background:inherit;opacity:0.15;}
+.sc-tile.current{border-color:#fff;border-width:3px;box-shadow:inset 0 0 0 3px rgba(255,255,255,0.4),0 0 50px rgba(255,255,255,0.35),0 0 100px rgba(255,255,255,0.12);filter:brightness(1.0);}
+.sc-tile.next-up{border-color:rgba(255,255,255,0.25);filter:brightness(0.75);}
 .sc-tile-name{font-family:'Cinzel',serif;font-weight:700;color:#fff;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;line-height:1.2;position:relative;z-index:1;}
 .sc-tile-score{font-family:'Cinzel',serif;font-weight:700;color:#fff;text-align:center;position:relative;z-index:1;line-height:1.1;}
 .sc-tile-sub{font-family:'Cinzel',serif;font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);text-align:center;position:relative;z-index:1;margin-top:5px;letter-spacing:0.5px;}
@@ -526,7 +526,7 @@ function renderGrid(){
       },{passive:false});
 
       grid.appendChild(tile);
-    })(pIdx,row,col,pos);
+    })(pIdx,gridRow,gridCol,pos);
   }
 
   // Round label
