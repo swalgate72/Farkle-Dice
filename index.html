@@ -206,7 +206,7 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);flex-shrink:0;z-index:10;">
     <button onclick="showScreen('mode-select')" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#888;padding:6px 14px;font-size:13px;">Quit</button>
     <div id="sc-round-lbl" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.5);text-align:center;"></div>
-    <div style="width:60px;"></div>
+    <button id="undo-btn" onclick="scorerUndo()" style="background:rgba(255,180,0,0.12);border:1px solid rgba(255,180,0,0.25);border-radius:8px;color:#fa8;padding:6px 14px;font-size:18px;opacity:0.3;transition:opacity 0.2s;" disabled>&#8592;</button>
   </div>
   <!-- Order phase banner (shown before game starts) -->
   <div id="order-banner" style="display:none;">&#9651; DRAG TILES TO SET ORDER OF PLAY &#9661;</div>
@@ -441,12 +441,13 @@ function startScorer(){
 }
 
 function confirmTileOrder(){
-  // Reorder players array to match playerOrder, reset currentIdx to random start
   var reordered=playerOrder.map(function(i){return players[i];});
   players=reordered;
   currentIdx=Math.floor(Math.random()*players.length);
   firstRoundStart=currentIdx;
   orderingPhase=false;
+  turnHistory=[];
+  updateUndoBtn();
   document.getElementById('order-banner').style.display='none';
   document.getElementById('order-confirm-bar').style.display='none';
   renderGrid();
@@ -473,6 +474,7 @@ function gridLayout(n){
 // ── Order phase grid (touch drag to reorder) ────────────────────────────────
 var orderingPhase=false;
 var playerOrder=[];
+var turnHistory=[];   // stack of snapshots for undo
 var dragSrcPos=null;   // position index being dragged in playerOrder
 var dragEl=null;       // the DOM element being dragged (clone)
 var dragOriginEl=null; // the original tile
@@ -792,7 +794,79 @@ function smBust(){
   scorerAdvance(smPlayerIdx,0,true);
 }
 
+function snapshotState(){
+  return {
+    players: players.map(function(p){return{name:p.name,score:p.score,onBoard:p.onBoard};}),
+    currentIdx: currentIdx,
+    firstRound: firstRound,
+    firstRoundStart: firstRoundStart,
+    finalRound: finalRound,
+    finalRoundQueue: finalRoundQueue.slice(),
+    triggerIdx: triggerIdx,
+    leadingScore: leadingScore,
+    // Store the earned amount and playerIdx so we can pre-fill the modal
+    turnPlayerIdx: null,
+    turnEarned: 0,
+    turnWasBust: false
+  };
+}
+
+function restoreSnapshot(snap){
+  players = snap.players.map(function(p){return{name:p.name,score:p.score,onBoard:p.onBoard};});
+  currentIdx = snap.currentIdx;
+  firstRound = snap.firstRound;
+  firstRoundStart = snap.firstRoundStart;
+  finalRound = snap.finalRound;
+  finalRoundQueue = snap.finalRoundQueue.slice();
+  triggerIdx = snap.triggerIdx;
+  leadingScore = snap.leadingScore;
+}
+
+function updateUndoBtn(){
+  var btn=document.getElementById('undo-btn');
+  if(!btn) return;
+  var canUndo=turnHistory.length>0;
+  btn.disabled=!canUndo;
+  btn.style.opacity=canUndo?'1':'0.3';
+}
+
+function scorerUndo(){
+  if(turnHistory.length===0) return;
+  var entry=turnHistory.pop();
+  restoreSnapshot(entry);
+  updateUndoBtn();
+  renderGrid();
+  // Re-open score modal pre-filled with what was entered
+  openScoreModalUndo(entry);
+}
+
+function openScoreModalUndo(entry){
+  smPlayerIdx=entry.turnPlayerIdx;
+  // Reset counts
+  smCounts={1000:0,500:0,100:0,50:0};
+  // Decompose earned back into denominations
+  if(!entry.turnWasBust&&entry.turnEarned>0){
+    var rem=entry.turnEarned;
+    [1000,500,100,50].forEach(function(d){smCounts[d]=Math.floor(rem/d);rem=rem%d;});
+  }
+  var p=players[smPlayerIdx];
+  document.getElementById('sm-name').textContent=p.name;
+  document.getElementById('sm-prev').textContent=p.score>0?'Current score: '+p.score.toLocaleString():'No score yet';
+  // Show undo hint
+  var hint=entry.turnWasBust?'was BUST':'scored '+entry.turnEarned.toLocaleString();
+  document.getElementById('sm-prev').textContent+=' — undoing: '+hint;
+  smRefresh();
+  document.getElementById('score-modal').classList.add('show');
+}
+
 function scorerAdvance(pIdx,earned,isBust){
+  // Snapshot BEFORE applying this turn
+  var snap=snapshotState();
+  snap.turnPlayerIdx=pIdx;
+  snap.turnEarned=(!isBust&&earned>0)?earned:0;
+  snap.turnWasBust=isBust;
+  turnHistory.push(snap);
+  updateUndoBtn();
   if(!isBust&&earned>0){players[pIdx].score+=earned;if(earned>=500)players[pIdx].onBoard=true;}
   var triggered=!isBust&&players[pIdx].score>=WINNING;
   var prevScore=players[pIdx].score;
