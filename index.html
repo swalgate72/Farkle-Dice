@@ -829,9 +829,14 @@ function renderGrid(){
         sub.textContent='Need '+Math.max(0,needBoard).toLocaleString()+' to board';
         sub.style.color='rgba(255,180,0,0.8)';
       } else if(finalRound&&leadingScore>0){
-        var need=Math.ceil((leadingScore-p.score+50)/50)*50;
-        sub.textContent=need<=0?'★ IN THE LEAD':'Need '+need.toLocaleString()+' to win';
-        sub.style.color=need<=0?'#5f5':'rgba(255,150,80,0.9)';
+        if(p.score>=leadingScore){
+          sub.textContent='★ Winning position';
+          sub.style.color='#ffd700';
+        } else {
+          var need=Math.ceil((leadingScore-p.score+50)/50)*50;
+          sub.textContent='Need '+need.toLocaleString()+' to win';
+          sub.style.color='rgba(255,150,80,0.9)';
+        }
       } else {
         var toTarget=Math.max(0,WINNING-p.score);
         sub.textContent=toTarget===0?'★ TARGET HIT':'Need '+toTarget.toLocaleString()+' more';
