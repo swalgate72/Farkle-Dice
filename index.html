@@ -36,6 +36,18 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
 .drag-handle{cursor:grab;color:#555;font-size:18px;padding:0 8px;user-select:none;flex-shrink:0;}
 .player-row{display:flex;gap:10px;margin-bottom:10px;align-items:center;border-radius:12px;transition:background 0.15s;padding:2px;}
 .player-row.drag-over{background:rgba(68,170,255,0.08);outline:1px dashed rgba(68,170,255,0.3);}
+/* Scoring Index overlay */
+#scoring-overlay{display:none;position:fixed;inset:0;z-index:600;background:linear-gradient(160deg,#0a0a1a,#0d1a2a);overflow-y:auto;}
+#scoring-overlay.show{display:block;}
+.si-section{margin-bottom:20px;}
+.si-section-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#4af;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(68,170,255,0.2);}
+.si-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.si-row:last-child{border-bottom:none;}
+.si-combo{font-family:'Crimson Text',serif;font-size:16px;color:#ddd;}
+.si-pts{font-family:'Cinzel',serif;font-size:14px;font-weight:700;color:#7df;letter-spacing:1px;}
+.si-note{font-family:'Crimson Text',serif;font-size:12px;color:#666;font-style:italic;margin-top:2px;}
+/* Scoring Index floating button */
+#si-fab{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;background:linear-gradient(135deg,#1a2a5e,#2244aa);border:2px solid rgba(68,136,255,0.5);border-radius:16px;color:#fff;font-family:'Cinzel',serif;font-size:10px;font-weight:700;letter-spacing:1.5px;padding:0;box-shadow:0 6px 24px rgba(68,136,255,0.5);display:none;width:64px;height:64px;text-align:center;line-height:1.5;}
 /* Order phase */
 #order-banner{background:rgba(68,136,255,0.15);border-bottom:1px solid rgba(68,136,255,0.3);padding:10px 16px;text-align:center;font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;color:#7df;flex-shrink:0;}
 #order-confirm-bar{padding:12px 16px;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);flex-shrink:0;}
@@ -156,11 +168,13 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
       </div>
       <button onclick="goToStep2()" class="btn btn-blue" style="width:100%;font-size:16px;font-weight:700;letter-spacing:3px;">NEXT: NAME PLAYERS &rarr;</button>
       <button onclick="showScreen('mode-select')" style="width:100%;margin-top:12px;padding:12px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#666;font-size:13px;">&larr; Change Mode</button>
+      <button onclick="openScoringIndex()" style="width:100%;margin-top:8px;padding:10px;border-radius:12px;background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.2);color:#4af;font-size:12px;font-family:'Cinzel',serif;letter-spacing:2px;">&#9432; SCORING INDEX</button>
     </div>
     <div id="step2-panel" style="display:none;">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
         <button onclick="goToStep1()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#aaa;padding:8px 14px;font-size:13px;">&larr; Back</button>
         <span style="flex:1;text-align:center;font-family:'Cinzel',serif;font-size:13px;letter-spacing:2px;color:#4af;" id="step2-summary"></span>
+        <button onclick="openScoringIndex()" style="background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.25);border-radius:10px;color:#4af;padding:8px 12px;font-size:12px;font-family:'Cinzel',serif;letter-spacing:1px;">&#9432;</button>
       </div>
       <div class="card" style="padding:28px;margin-bottom:16px;">
         <div class="lbl" style="margin-bottom:6px;">Enter player names</div>
@@ -318,6 +332,72 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
     </div>
   </div>
 </div>
+
+<!-- SCORING INDEX OVERLAY -->
+<div id="scoring-overlay">
+  <div style="max-width:480px;margin:0 auto;padding:32px 24px 48px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <h2 style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:3px;color:#fff;">SCORING INDEX</h2>
+      <button onclick="closeScoringIndex()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:#aaa;padding:8px 16px;font-size:14px;font-family:'Cinzel',serif;letter-spacing:1px;">Close</button>
+    </div>
+
+    <div class="si-section">
+      <div class="si-section-title">Single Dice</div>
+      <div class="si-row"><span class="si-combo">&#9856; Single 1</span><span class="si-pts">100 pts</span></div>
+      <div class="si-row"><span class="si-combo">&#9860; Single 5</span><span class="si-pts">50 pts</span></div>
+    </div>
+
+    <div class="si-section">
+      <div class="si-section-title">Three of a Kind</div>
+      <div class="si-row"><span class="si-combo">Three 1s</span><span class="si-pts">1,000 pts</span></div>
+      <div class="si-row"><span class="si-combo">Three 2s</span><span class="si-pts">200 pts</span></div>
+      <div class="si-row"><span class="si-combo">Three 3s</span><span class="si-pts">300 pts</span></div>
+      <div class="si-row"><span class="si-combo">Three 4s</span><span class="si-pts">400 pts</span></div>
+      <div class="si-row"><span class="si-combo">Three 5s</span><span class="si-pts">500 pts</span></div>
+      <div class="si-row"><span class="si-combo">Three 6s</span><span class="si-pts">600 pts</span></div>
+    </div>
+
+    <div class="si-section">
+      <div class="si-section-title">Four, Five &amp; Six of a Kind</div>
+      <div class="si-row">
+        <div><div class="si-combo">Four of a Kind</div><div class="si-note">Double the three-of-a-kind score (e.g. four 1s = 2,000)</div></div>
+        <span class="si-pts">x2</span>
+      </div>
+      <div class="si-row">
+        <div><div class="si-combo">Five of a Kind</div><div class="si-note">Triple the three-of-a-kind score (e.g. five 1s = 3,000)</div></div>
+        <span class="si-pts">x3</span>
+      </div>
+      <div class="si-row">
+        <div><div class="si-combo">Six of a Kind</div><div class="si-note">Quadruple the three-of-a-kind score (e.g. six 1s = 4,000)</div></div>
+        <span class="si-pts">x4</span>
+      </div>
+    </div>
+
+    <div class="si-section">
+      <div class="si-section-title">Special Combinations</div>
+      <div class="si-row">
+        <div><div class="si-combo">Short Straight</div><div class="si-note">5-dice run: 1-2-3-4-5 or 2-3-4-5-6</div></div>
+        <span class="si-pts">1,000 pts</span>
+      </div>
+      <div class="si-row">
+        <div><div class="si-combo">Long Straight</div><div class="si-note">All 6 different: 1-2-3-4-5-6</div></div>
+        <span class="si-pts">1,500 pts</span>
+      </div>
+      <div class="si-row">
+        <div><div class="si-combo">Three Pairs</div><div class="si-note">Any three pairs (e.g. 2-2, 3-3, 4-4)</div></div>
+        <span class="si-pts">1,500 pts</span>
+      </div>
+    </div>
+
+    <div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.2);border-radius:14px;padding:14px 16px;margin-top:8px;">
+      <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:#4af;text-transform:uppercase;margin-bottom:6px;">Hot Dice</div>
+      <div style="font-family:'Crimson Text',serif;font-size:14px;color:#aaa;">If all 6 dice score, roll all 6 again and add to your turn total.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Scoring Index FAB (shown on scorer screen) -->
+<button id="si-fab" onclick="openScoringIndex()">SCORING<br>INDEX</button>
 
 <div id="toast"></div>
 
@@ -495,6 +575,8 @@ function showScreen(id){
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById(id).classList.add('active');
   if(id==='mode-select') renderLeaderboard();
+  var fab=document.getElementById('si-fab');
+  if(fab) fab.style.display=(id==='scorer')?'block':'none';
 }
 
 // ── MODE SELECT ───────────────────────────────────────────────────────────────
@@ -1061,7 +1143,73 @@ function scorerAdvance(pIdx,earned,isBust){
 }
 
 // ── DICE GAME ─────────────────────────────────────────────────────────────────
-function scoreDice(d){var counts=[0,0,0,0,0,0,0];for(var i=0;i<d.length;i++)counts[d[i]]++;var score=0,used=[0,0,0,0,0,0,0];for(var f=1;f<=6;f++)if(counts[f]>=3){score+=f===1?1000:f*100;used[f]+=3;}var r1=counts[1]-used[1];score+=r1*100;used[1]+=r1;var r5=counts[5]-used[5];score+=r5*50;used[5]+=r5;var ul=used.slice(),mask=[];for(var i=0;i<d.length;i++){if(ul[d[i]]>0){ul[d[i]]--;mask.push(true);}else mask.push(false);}return{score:score,mask:mask};}
+function scoreDice(d){
+  var counts=[0,0,0,0,0,0,0];
+  for(var i=0;i<d.length;i++) counts[d[i]]++;
+  var score=0, used=[0,0,0,0,0,0,0];
+  var n=d.length;
+
+  // ── Special 6-dice combos (only when all 6 dice in play) ─────────────────
+  if(n===6){
+    // Long straight: 1-2-3-4-5-6
+    if(counts[1]&&counts[2]&&counts[3]&&counts[4]&&counts[5]&&counts[6]){
+      return{score:1500,mask:[true,true,true,true,true,true]};
+    }
+    // Three pairs
+    var pairs=0;for(var f=1;f<=6;f++)if(counts[f]===2)pairs++;
+    if(pairs===3){
+      return{score:1500,mask:[true,true,true,true,true,true]};
+    }
+  }
+
+  // ── Short straight (5 dice): 1-2-3-4-5 or 2-3-4-5-6 ─────────────────────
+  if(n>=5){
+    var has12345=counts[1]>=1&&counts[2]>=1&&counts[3]>=1&&counts[4]>=1&&counts[5]>=1;
+    var has23456=counts[2]>=1&&counts[3]>=1&&counts[4]>=1&&counts[5]>=1&&counts[6]>=1;
+    if(has12345||has23456){
+      // Mark the 5 straight dice as used, leave remainder
+      var straightDice=has12345?[1,2,3,4,5]:[2,3,4,5,6];
+      var tempUsed=[0,0,0,0,0,0,0];
+      straightDice.forEach(function(v){tempUsed[v]++;});
+      var mask=[];
+      var tu=tempUsed.slice();
+      for(var i=0;i<d.length;i++){if(tu[d[i]]>0){tu[d[i]]--;mask.push(true);}else mask.push(false);}
+      // Score remaining dice on top
+      var rem=[];
+      for(var i=0;i<d.length;i++)if(!mask[i])rem.push(d[i]);
+      var remResult=rem.length>0?scoreDice(rem):{score:0,mask:[]};
+      var ri=0;
+      var finalMask=mask.map(function(m){return m;});
+      for(var i=0;i<finalMask.length;i++){
+        if(!finalMask[i]&&ri<remResult.mask.length){
+          finalMask[i]=remResult.mask[ri++];
+        }
+      }
+      return{score:1000+remResult.score,mask:finalMask};
+    }
+  }
+
+  // ── N of a kind (3, 4, 5, 6) ─────────────────────────────────────────────
+  for(var f=1;f<=6;f++){
+    if(counts[f]>=3){
+      var base=f===1?1000:f*100;
+      var mult=counts[f]-2; // 3=x1, 4=x2, 5=x3, 6=x4
+      score+=base*mult;
+      used[f]+=counts[f]; // use ALL matching dice
+    }
+  }
+
+  // ── Single 1s and 5s ──────────────────────────────────────────────────────
+  var r1=counts[1]-used[1]; score+=r1*100; used[1]+=r1;
+  var r5=counts[5]-used[5]; score+=r5*50;  used[5]+=r5;
+
+  // ── Build mask ────────────────────────────────────────────────────────────
+  var ul=used.slice(), mask=[];
+  for(var i=0;i<d.length;i++){
+    if(ul[d[i]]>0){ul[d[i]]--;mask.push(true);}else mask.push(false);
+  }
+  return{score:score,mask:mask};
+}
 function isBust(d){return scoreDice(d).score===0;}
 function allScore(d){var m=scoreDice(d).mask;for(var i=0;i<m.length;i++)if(!m[i])return false;return true;}
 function getSelectedScore(){var sub=[];for(var i=0;i<dice.length;i++)if(selected[i])sub.push(dice[i]);return scoreDice(sub).score;}
@@ -1102,6 +1250,14 @@ function endGame(){
 }
 
 function showToast(msg){var t=document.getElementById('toast');t.innerHTML=msg;t.style.display='block';if(toastTimer)clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.style.display='none';},3500);}
+
+// ── SCORING INDEX ────────────────────────────────────────────────────────────
+function openScoringIndex(){
+  document.getElementById('scoring-overlay').classList.add('show');
+}
+function closeScoringIndex(){
+  document.getElementById('scoring-overlay').classList.remove('show');
+}
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 renderLeaderboard();
