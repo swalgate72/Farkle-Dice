@@ -257,7 +257,20 @@ button:disabled{background:rgba(255,255,255,0.05)!important;color:#555!important
   <div id="sc-grid" style="flex:1;display:grid;min-height:0;"></div>
   <!-- Order confirm bar (shown before game starts) -->
   <div id="order-confirm-bar" style="display:none;">
-    <button onclick="confirmTileOrder()" style="width:100%;padding:18px;border-radius:16px;background:linear-gradient(135deg,#2255cc,#4488ff);border:none;color:#fff;font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:3px;box-shadow:0 6px 28px rgba(68,136,255,0.5);">CONFIRM &amp; START GAME</button>
+    <button onclick="confirmTileOrder()" style="width:100%;padding:18px;border-radius:16px;background:linear-gradient(135deg,#2255cc,#4488ff);border:none;color:#fff;font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:3px;box-shadow:0 6px 28px rgba(68,136,255,0.5);">CONFIRM SEATS</button>
+  </div>
+</div>
+
+<!-- DEALER PICK SCREEN -->
+<div id="dealer-pick" class="screen" style="display:flex;flex-direction:column;height:100vh;background:#0a0a1a;">
+  <div style="padding:20px 20px 12px;text-align:center;">
+    <div style="font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;color:#4af;margin-bottom:4px;">WHO DEALS FIRST?</div>
+    <div style="font-family:'Crimson Text',serif;font-size:15px;color:#666;">Tap a player, or choose below</div>
+  </div>
+  <div id="dealer-grid" style="flex:1;display:grid;min-height:0;overflow:hidden;"></div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
+    <button id="dealer-random-btn" onclick="dealerPickRandom()" style="width:100%;padding:14px;border-radius:14px;background:rgba(68,136,255,0.1);border:2px solid rgba(68,136,255,0.3);color:#7df;font-family:'Cinzel',serif;font-size:14px;font-weight:700;letter-spacing:2px;">🎲 PICK DEALER AT RANDOM</button>
+    <button id="dealer-rotate-btn" onclick="dealerPickRotate()" style="display:none;width:100%;padding:14px;border-radius:14px;background:rgba(255,180,0,0.08);border:2px solid rgba(255,180,0,0.2);color:#fa8;font-family:'Cinzel',serif;font-size:14px;font-weight:700;letter-spacing:2px;">🔄 NEXT FROM LAST GAME</button>
   </div>
 </div>
 
@@ -682,15 +695,72 @@ function startScorer(){
 }
 
 function confirmTileOrder(){
+  // Commit the drag order
   var reordered=playerOrder.map(function(i){return players[i];});
   players=reordered;
-  currentIdx=Math.floor(Math.random()*players.length);
-  firstRoundStart=currentIdx;
   orderingPhase=false;
-  turnHistory=[];
-  updateUndoBtn();
   document.getElementById('order-banner').style.display='none';
   document.getElementById('order-confirm-bar').style.display='none';
+  // Show dealer pick screen
+  renderDealerGrid();
+  // Show rotate button only if a last-game dealer is stored and matches someone
+  var lastDealer=localStorage.getItem('farkle_last_dealer');
+  var rotateBtn=document.getElementById('dealer-rotate-btn');
+  if(lastDealer && players.length>1){
+    var match=players.findIndex(function(p){return p.name===lastDealer;});
+    if(match>=0){
+      var nextIdx=(match+1)%players.length;
+      rotateBtn.textContent='\uD83D\uDD04 NEXT FROM LAST GAME ('+players[nextIdx].name+')';
+      rotateBtn.style.display='block';
+    } else {
+      rotateBtn.style.display='none';
+    }
+  } else {
+    rotateBtn.style.display='none';
+  }
+  showScreen('dealer-pick');
+}
+
+function renderDealerGrid(){
+  var grid=document.getElementById('dealer-grid');
+  grid.innerHTML='';
+  var n=players.length;
+  var rows=Math.ceil(n/2);
+  var cols=n<=1?1:2;
+  grid.style.gridTemplateColumns='repeat('+cols+',1fr)';
+  grid.style.gridTemplateRows='repeat('+rows+',1fr)';
+  players.forEach(function(p,idx){
+    var cell=document.createElement('div');
+    cell.style.cssText='display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;background:rgba(255,255,255,0.03);border-right:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06);';
+    cell.innerHTML='<div style="font-family:\'Cinzel\',serif;font-size:clamp(16px,4vw,26px);font-weight:700;color:#fff;letter-spacing:2px;text-align:center;padding:8px;">'+p.name+'</div>';
+    (function(i){
+      cell.addEventListener('click',function(){startGameWithDealer(i);});
+      cell.addEventListener('touchstart',function(){cell.style.background='rgba(68,136,255,0.18)';},{passive:true});
+      cell.addEventListener('touchend',function(){setTimeout(function(){cell.style.background='rgba(255,255,255,0.03)';},200);},{passive:true});
+    })(idx);
+    grid.appendChild(cell);
+  });
+}
+
+function dealerPickRandom(){
+  var idx=Math.floor(Math.random()*players.length);
+  startGameWithDealer(idx);
+}
+
+function dealerPickRotate(){
+  var lastDealer=localStorage.getItem('farkle_last_dealer');
+  var match=players.findIndex(function(p){return p.name===lastDealer;});
+  var idx=(match>=0 && players.length>1)?(match+1)%players.length:0;
+  startGameWithDealer(idx);
+}
+
+function startGameWithDealer(idx){
+  currentIdx=idx;
+  firstRoundStart=idx;
+  firstRound=true;
+  turnHistory=[];
+  updateUndoBtn();
+  showScreen('scorer');
   renderGrid();
   setTimeout(function(){showToast('\uD83C\uDFB2 '+players[currentIdx].name+' goes first!');},300);
 }
@@ -1244,6 +1314,8 @@ function endGame(){
     row.innerHTML='<span style="color:'+(i===0?'#ffd700':'#aaa')+';font-weight:'+(i===0?700:400)+';">'+(i+1)+'. '+p.name+'</span><span style="font-family:monospace;color:'+(i===0?'#ffd700':'#888')+';">'+p.score.toLocaleString()+'</span>';
     fs.appendChild(row);
   });
+  // Record who dealt first (for "next from last game" option)
+  if(players[firstRoundStart]) localStorage.setItem('farkle_last_dealer', players[firstRoundStart].name);
   // Record in persistent DB
   dbRecordGame(winner.name, players.map(function(p){return{name:p.name,score:p.score};}));
   showScreen('gameover');
